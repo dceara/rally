@@ -59,7 +59,7 @@ class DevstackEngineTestCase(test.TestCase):
         mock_open.return_value = "fake_file"
         server = mock.Mock()
         server.password = "secret"
-        self.engine.prepare_server(server)
+        self.engine._prepare_server(server)
         calls = [
             mock.call("/bin/sh -e", stdin="fake_file"),
             mock.call("chpasswd", stdin="rally:secret"),

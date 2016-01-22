@@ -1,0 +1,16 @@
+{
+    "type": "OvnSandboxControllerEngine",
+    "ovs_repo" : "https://github.com/openvswitch/ovs.git",
+    "ovs_branch" : "branch-2.5",
+    "ovs_user" : "rally",
+    "provider": {
+        "type": "OvsSandboxProvider",
+        "deployment_name": "OVN controller node",
+        "credentials": [
+            {
+                "host": "192.168.20.10",
+                "user": "root"}
+        ]
+    }
+
+}

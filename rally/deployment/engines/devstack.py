@@ -97,7 +97,7 @@ class DevstackEngine(engine.Engine):
             self.local_conf.update(self.config["local_conf"])
 
     @logging.log_deploy_wrapper(LOG.info, _("Prepare server for devstack"))
-    def prepare_server(self, server):
+    def _prepare_server(self, server):
         script_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                    "devstack", "install.sh"))
         server.ssh.run("/bin/sh -e", stdin=open(script_path, "rb"))
