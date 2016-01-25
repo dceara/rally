@@ -1,5 +1,5 @@
 {
-    "type": "MultihostEngine",
+    "type": "OvnMultihostEngine",
     "controller": {
         "type": "OvnSandboxControllerEngine",
         "ovs_repo" : "https://github.com/openvswitch/ovs.git",
@@ -21,10 +21,13 @@
             "ovs_repo" : "https://github.com/openvswitch/ovs.git",
             "ovs_branch" : "branch-2.5",
             "ovs_user" : "rally",
-            "count": 1,
+            "amount": 2,
+            "start_network": "192.168.20.20/24",
+            "net_dev": "eth1",
+            "controller_ip": "192.168.20.10",
             "provider": {
                 "type": "OvsSandboxProvider",
-                "deployment_name": "OVN sandbox node 1",
+                "deployment_name": "OVN sandbox farm 1",
                 "credentials": [
                     {
                         "host": "192.168.20.20",

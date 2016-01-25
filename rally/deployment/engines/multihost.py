@@ -90,7 +90,6 @@ class MultihostEngine(engine.Engine):
         credential = self.credentials["admin"]
         self.controller_ip = parse.urlparse(credential.auth_url).hostname
 
-        return self.credentials # remove this
     
         if "nodes" in self.config:
             for node_config in self.config["nodes"]:
