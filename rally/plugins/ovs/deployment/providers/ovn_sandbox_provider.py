@@ -51,7 +51,6 @@ class OvsSandboxProvider(provider.ProviderFactory):
         "type": "object",
         "properties": {
             "type": {"type": "string"},
-            "deployment_name": {"type": "string"},
             "credentials": {
                 "type": "array",
                 "items": CREDENTIALS_SCHEMA

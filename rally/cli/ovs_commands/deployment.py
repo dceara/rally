@@ -27,7 +27,8 @@ from rally.common import utils
 from rally import exceptions
 from rally import plugins
 
-class OVSDeploymentcommands(object):
+      
+class DeploymentCommands(object):
     """Set of commands that allow you to manage ovs deployments."""
     
     

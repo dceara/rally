@@ -13,10 +13,17 @@ import sys
 
 from rally.cli import cliutils
 from rally.cli.ovs_commands import deployment
+#from rally.cli.ovs_commands import task
+#from rally.cli.commands import deployment
+from rally.cli.commands import task
 
+from rally.common import profile
+
+profile.profile = profile.PROFILE_OVS
 
 ovs_categories = {
-    "deployment": deployment.OVSDeploymentcommands,
+    "deployment": deployment.DeploymentCommands,
+    "task": task.TaskCommands,
 }
 
 

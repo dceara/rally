@@ -31,6 +31,7 @@ import sqlalchemy.exc
 
 from rally.common.i18n import _
 from rally.common import logging
+from rally.common import profile
 from rally.common.plugin import discover
 from rally.common.plugin import info
 from rally.common import version
@@ -475,7 +476,7 @@ def run(argv, categories):
              default_config_files=find_config_files(CONFIG_SEARCH_PATHS))
         logging.setup("rally")
         if not CONF.get("log_config_append"):
-            # The below two lines are to disable noise from request module. The
+            # The below two lines are to disabled noise from request module. The
             # standard way should be we make such lots of settings on the root
             # rally. However current oslo codes doesn't support such interface.
             # So I choose to use a 'hacking' way to avoid INFO logs from
@@ -507,14 +508,37 @@ def run(argv, categories):
         return(2)
 
     if CONF.category.name == "version":
+        print ("here")
         print(version.version_string())
         return(0)
 
     if CONF.category.name == "bash-completion":
         print(_generate_bash_completion_script())
         return(0)
+    
+    
+    if CONF.category.name == "profile":
+        return (0)
+    
 
     fn = CONF.category.action_fn
+    
+    if hasattr(fn, "meta"):
+        fn_profile = fn.meta.get("profile", None)
+        
+        disabled = False
+        if fn_profile != None:
+            include = fn_profile["include"]
+            exclude = fn_profile["exclude"] or []
+            
+            disabled = profile.is_disabled(include, exclude)
+            
+        if disabled == True:
+            print("Command '%s' is disabled for profile %s" % 
+                  (CONF.category.name, profile.profile))
+            return(1)
+            
+    
     fn_args = [encodeutils.safe_decode(arg)
                for arg in CONF.category.action_args]
     fn_kwargs = {}

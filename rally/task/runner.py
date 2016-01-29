@@ -20,6 +20,7 @@ import time
 
 import jsonschema
 
+from rally.common import profile
 from rally.common import logging
 from rally.common import objects
 from rally.common.plugin import plugin

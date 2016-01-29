@@ -1,0 +1,24 @@
+{% set controller_ip = controller_ip or "127.0.0.1" %}
+{
+    "OvnSandbox.create_sandbox": [
+        {
+            "args": {
+                "sandbox_create_args": {
+                    "amount": 2,
+                    "start_network": "192.168.20.20/24",
+                    "net_dev": "eth1",
+                    "controller_ip": "{{controller_ip}}"
+                }
+            },
+            "runner": {
+                "type": "serial",
+                "times": 1,
+                "concurrency": 2
+            },
+            "context": {
+
+                
+            }
+        }
+    ]
+}

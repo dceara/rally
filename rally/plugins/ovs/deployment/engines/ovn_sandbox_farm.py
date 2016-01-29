@@ -24,6 +24,8 @@ from rally.deployment.serverprovider import provider
 from . import get_script
 from . import get_updated_server
 from . import OVS_USER
+from ...consts import ResourceType
+
 
 from sandbox import SandboxEngine
 from netaddr.ip import IPRange
@@ -39,6 +41,7 @@ class OvnSandboxFarmEngine(SandboxEngine):
 
     {
         "type": "OvnSandboxFarmEngine",
+        "deployment_name": "ovn-sandbox-node-1",
         "ovs_repo" : "https://github.com/openvswitch/ovs.git",
         "ovs_branch" : "branch-2.5",
         "ovs_user" : "rally",
@@ -48,7 +51,6 @@ class OvnSandboxFarmEngine(SandboxEngine):
         "controller_ip": "192.168.20.10",
         "provider": {
             "type": "OvsSandboxProvider",
-            "deployment_name": "OVN sandbox farm 1",
             "credentials": [
                 {
                     "host": "192.168.20.20",
@@ -63,6 +65,7 @@ class OvnSandboxFarmEngine(SandboxEngine):
         "type": "object",
         "properties": {
             "type": {"type": "string"},
+            "deployment_name": {"type": "string"},
             "ovs_repo": {"type": "string"},
             "ovs_user": {"type": "string"},
             "ovs_branch": {"type": "string"},
@@ -109,11 +112,6 @@ class OvnSandboxFarmEngine(SandboxEngine):
         
         self._prepare_server(server)
         
-        #TODO: add sandbox info to resource
-        self.deployment.add_resource(provider_name="OvnSandboxFarmEngine",
-                                 type="credentials",
-                                 info=server.get_credentials())
-        
   
         ovs_user = self.config.get("ovs_user", OVS_USER)
         amount = self.config.get("amount", 1)
@@ -122,6 +120,12 @@ class OvnSandboxFarmEngine(SandboxEngine):
         controller_ip = self.config.get("controller_ip")
         start_network = self.config.get("start_network")
         net_dev = self.config.get("net_dev", "eth0")
+        
+        credential = server.get_credentials()
+        credential["user"] = ovs_user
+        self.deployment.add_resource(provider_name="OvnSandboxFarmEngine",
+                                 type=ResourceType.CREDENTIAL,
+                                 info=server.get_credentials())
         
         
         sandbox_network = netaddr.IPNetwork(start_network) 

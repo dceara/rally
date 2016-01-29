@@ -57,14 +57,24 @@ class OvnMultihostEngine(engine.Engine):
         self.controller, self.credentials = self._deploy_node(
                     self.config["controller"])
     
+        name = self.controller.config.get("deployment_name", 
+                                    "%s-controller" % self.deployment["name"])
+        self.controller.deployment.update_name(name)
+        
         credential = self.credentials["admin"]
         self.controller_ip = "" # TODO
         
         
         if "nodes" in self.config:
-            for node_config in self.config["nodes"]:
+            for i in range(len(self.config["nodes"])):
+                node_config = self.config["nodes"][i]
                 self._update_controller_ip(node_config)
-                self.nodes.append(self._deploy_node(node_config)[0])
+                
+                node, credential = self._deploy_node(node_config)
+                name = node.config.get("deployment_name", 
+                            "%s-node-%d" % (self.deployment["name"], i))
+                node.deployment.update_name(name)
+                self.nodes.append(node)
         
         return self.credentials        
     

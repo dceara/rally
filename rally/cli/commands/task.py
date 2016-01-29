@@ -34,6 +34,7 @@ from rally.common.i18n import _
 from rally.common import junit
 from rally.common import logging
 from rally.common import utils as rutils
+from rally.common import profile
 from rally import consts
 from rally import exceptions
 from rally import plugins
@@ -201,6 +202,7 @@ class TaskCommands(object):
                         "any SLA check for it fails.")
     @envutils.with_default_deployment(cli_arg_name="deployment")
     @plugins.ensure_plugins_are_loaded
+    
     def start(self, task, deployment=None, task_args=None, task_args_file=None,
               tag=None, do_use=False, abort_on_sla_failure=False):
         """Start benchmark task.
@@ -240,7 +242,7 @@ class TaskCommands(object):
             print("Benchmarking... This can take a while...\n")
             print("To track task status use:\n")
             print("\trally task status\n\tor\n\trally task detailed\n")
-
+            
             if do_use:
                 self.use(task_instance["uuid"])
 
@@ -731,6 +733,7 @@ class TaskCommands(object):
                    action="store_true",
                    help="Output in JSON format.")
     @envutils.with_default_task_id
+    @profile.configure(exclude=[profile.PROFILE_OVS])
     def sla_check(self, task_id=None, tojson=False):
         """Display SLA check results table.
 

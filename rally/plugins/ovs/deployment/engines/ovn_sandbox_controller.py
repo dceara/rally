@@ -38,7 +38,7 @@ class OvnSandboxControllerEngine(SandboxEngine):
         "type": "OvnSandboxControllerEngine",
         "provider": {
             "type": "OvsSandboxProvider",
-            "deployment_name": "OVN controller node",
+            "deployment_name": "ovn-control-node",
             "credentials": [
                 {
                     "host": "192.168.20.10",
@@ -52,6 +52,7 @@ class OvnSandboxControllerEngine(SandboxEngine):
         "type": "object",
         "properties": {
             "type": {"type": "string"},
+            "deployment_name": {"type": "string"},
             "ovs_repo": {"type": "string"},
             "ovs_branch": {"type": "string"},
             "ovs_user": {"type": "string"},
