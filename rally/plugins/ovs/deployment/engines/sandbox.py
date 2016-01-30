@@ -38,33 +38,42 @@ class SandboxEngine(engine.Engine):
         super(SandboxEngine, self).__init__(deployment)
 
 
+    '''
+        create user in host if necessary
+        
+        :param user A user name used to run test, give it sudo premission with 
+                    no password. 
+    '''
+    def _prepare(self, server, user):
+        server.ssh.run("/bin/bash -e -s %s" % user, stdin=get_script("prepare.sh"),
+                            stdout=sys.stdout, stderr=sys.stderr);
+
+        if server.password:
+            server.ssh.run("chpasswd",
+                           stdin="%s:%s" % (user, server.password))
+
+
+    '''
+        install ovs from source code as 
+    '''
     def _install_ovs(self, server):
         ovs_repo = self.config.get("ovs_repo", OVS_REPO)
         ovs_branch = self.config.get("ovs_branch", OVS_BRANCH)
         ovs_user = self.config.get("ovs_user", OVS_USER)
         
-        # TODO: put file to and run it from remote 
+        ovs_server = get_updated_server(server, user=ovs_user)
+       
         cmd = "/bin/bash -e -s %s %s %s" % (ovs_repo, ovs_branch, ovs_user)
-        server.ssh.run(cmd, stdin=get_script("install.sh"),
+        ovs_server.ssh.run(cmd, stdin=get_script("install.sh"),
                             stdout=sys.stdout, stderr=sys.stderr);
 
-        
-    def _prepare_server(self, server):
+
+    def _deploy(self, server):
         
         ovs_user = self.config.get("ovs_user", OVS_USER)
+        self._prepare(server, ovs_user)
         
-        server.ssh.run("/bin/bash -e -s %s" % ovs_user, stdin=get_script("prepare.sh"),
-                            stdout=sys.stdout, stderr=sys.stderr);
-
-        server.ssh.run("pwd", stdout=sys.stdout, stderr=sys.stderr);
-        
-        if server.password:
-            server.ssh.run("chpasswd",
-                           stdin="%s:%s" % (ovs_user, server.password))
-        
-        ovs_server = get_updated_server(server, user=ovs_user)
-        
-        self._install_ovs(ovs_server)
+        self._install_ovs(server)
         
         
         

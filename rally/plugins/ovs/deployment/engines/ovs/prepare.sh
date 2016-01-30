@@ -1,6 +1,10 @@
 #!/bin/bash
 
+set -e # exit on first error
+
 OVS_USER=$1
+
+echo "Prepare user $OVS_USER for ovs deployment"
 
 useradd $OVS_USER -m || echo "User $OVS_USER is already exists" >&2
 mkdir -m 700 /home/$OVS_USER/.ssh || true
@@ -16,4 +20,4 @@ EOF
 
 fi
 
-echo "Prepare user $OVS_USER for ovs sandbox done"
+echo "Prepare user $OVS_USER done"

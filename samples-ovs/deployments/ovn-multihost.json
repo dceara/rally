@@ -3,9 +3,11 @@
     "controller": {
         "type": "OvnSandboxControllerEngine",
         "deployment_name": "ovn-controller-node",
-        "ovs_repo" : "https://github.com/openvswitch/ovs.git",
-        "ovs_branch" : "branch-2.5",
-        "ovs_user" : "rally",
+        "ovs_repo": "https://github.com/openvswitch/ovs.git",
+        "ovs_branch": "branch-2.5",
+        "ovs_user": "rally",
+        "net_dev": "eth1",
+        "controller_cidr": "192.168.10.10/16",
         "provider": {
             "type": "OvsSandboxProvider",
             "credentials": [
@@ -22,15 +24,26 @@
             "ovs_repo" : "https://github.com/openvswitch/ovs.git",
             "ovs_branch" : "branch-2.5",
             "ovs_user" : "rally",
-            "amount": 2,
-            "start_network": "192.168.20.20/24",
-            "net_dev": "eth1",
-            "controller_ip": "192.168.20.10",
             "provider": {
                 "type": "OvsSandboxProvider",
                 "credentials": [
                     {
                         "host": "192.168.20.20",
+                        "user": "root"}
+                ]
+            }
+        },
+        {
+            "type": "OvnSandboxFarmEngine",
+            "deployment_name": "ovn-sandbox-node-1",
+            "ovs_repo" : "https://github.com/openvswitch/ovs.git",
+            "ovs_branch" : "branch-2.5",
+            "ovs_user" : "rally",
+            "provider": {
+                "type": "OvsSandboxProvider",
+                "credentials": [
+                    {
+                        "host": "192.168.20.30",
                         "user": "root"}
                 ]
             }

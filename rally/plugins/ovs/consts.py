@@ -9,7 +9,8 @@ from rally.common import utils
 
 
 class _ResourceType(utils.ImmutableMixin, utils.EnumMixin):
-    CREDENTIAL = "credentials"
+    CREDENTIAL = "credential"
+    CONTROLLER = "controller"
     
 ResourceType = _ResourceType()
 

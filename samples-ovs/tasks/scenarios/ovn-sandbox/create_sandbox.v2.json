@@ -1,12 +1,45 @@
 {
     "version": 2,
-    "title": "create sandbox",
+    "title": "Create sandbox",
     "description": "Creates multiple sandboxes on BMs",
     "tags": ["ovn", "sandbox"],
     
     "subtasks": [
         {
-            "title": "do create sandbox",
+            "title": "Create sandbox on farm 0",
+            "group": "ovn",
+            "description": "optional blablabla",
+            "tags": ["ovn", "sandbox", "create"],
+            "run_in_parallel": true,
+            
+            "workloads": [
+                {
+                    "name": "OvnSandbox.create_sandbox",
+                    "args": {
+                        "sandbox_create_args": {
+                            "farm": "ovn-sandbox-node-0",
+                            "amount": 100,
+                            "start_cidr": "192.168.64.0/16",
+                            "net_dev": "eth1",
+                            "controller_ip": "192.168.10.10"
+                        }
+                    },
+                    "runner": {
+                        "type": "constant",
+                        "concurrency": 4,
+                        "times": 2,
+                        "max_cpu_count": 2
+                    },
+                    "context": {
+                       "ovn_multihost" : {
+                            "controller": "ovn-control-node"
+                        } 
+                    }
+                }
+            ]
+        },
+        {
+            "title": "Create sandbox on farm 1",
             "group": "ovn",
             "description": "optional blablabla",
             "tags": ["ovn", "sandbox", "create"],
@@ -17,11 +50,11 @@
                     "name": "OvnSandbox.create_sandbox",
                     "args": {
                         "sandbox_create_args": {
-                            "farm": "ovn-sandbox-node-0",
-                            "amount": 2,
-                            "start_cidr": "192.168.20.20/24",
+                            "farm": "ovn-sandbox-node-1",
+                            "amount": 100,
+                            "start_cidr": "192.168.128.0/16",
                             "net_dev": "eth1",
-                            "controller_ip": "192.168.20.10"
+                            "controller_ip": "192.168.10.10"
                         }
                     },
                     "runner": {
@@ -32,7 +65,6 @@
                             "controller": "ovn-control-node"
                         } 
                     }
-                    
                 }
             ]
         }

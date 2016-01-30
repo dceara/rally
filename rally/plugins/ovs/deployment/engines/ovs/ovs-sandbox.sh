@@ -15,7 +15,7 @@
 # limitations under the License.
 
 #set -e # exit on first error
-set -x
+#set -x
 
 run() {
     (cd "$sandbox" && "$@") || exit 1
@@ -283,8 +283,8 @@ function get_ip_cidrs {
 
     i=0
     IFS=$'\n'
-    echo "$dev ip cidrs:"
-    echo "---------------------------"
+    #echo "$dev ip cidrs:"
+    #echo "---------------------------"
     for inet in `ip addr show $dev | grep -e 'inet\b'` ; do
         local ip_cidr=`echo $inet | \
             sed -n  -e  's%.*inet \(\([0-9]\{1,3\}\.\)\{3\}[0-9]\{1,3\}/[0-9]\+\) .*%\1%p'`
@@ -294,7 +294,7 @@ function get_ip_cidrs {
         IP_CIDR_ARRAY[i]=$ip_cidr
         IP_NETMASK_TABLE[$ip_addr]=$netmask
 
-        echo "    cidr $ip_cidr"
+        #echo "    cidr $ip_cidr"
         ((i+=1))
     done
 
@@ -309,7 +309,7 @@ function in_array # ( keyOrValue, arrayKeysOrValues )
     IFS=' '
     local i
     for i in "${@:2}"; do
-        echo "$i == $elem"
+        #echo "$i == $elem"
         [[ "$i" == "$elem" ]] && return 0;
     done
 
@@ -432,15 +432,6 @@ EOF
 # 'ovn-uuid'.
 OVN_UUID=${OVN_UUID:-}
 
-
-function is_ovn_service_enabled {
-    ovn_service=$1
-    is_service_enabled ovn && return 0
-    is_service_enabled $ovn_service && return 0
-    return 1
-}
-
-
 function configure_ovn {
     echo "Configuring OVN"
 
@@ -464,6 +455,9 @@ function start_ovs {
     touch "$sandbox"/.conf.db.~lock~
     run ovsdb-tool create conf.db "$schema"
 
+    CON_IP=`get_ip_from_cidr $controller_ip`
+    echo "controller ip: $CON_IP"
+
     EXTRA_DBS=""
     OVSDB_REMOTE=""
     if $controller ; then
@@ -473,8 +467,10 @@ function start_ovs {
             run ovsdb-tool create ovnsb.db "$ovnsb_schema"
             run ovsdb-tool create ovnnb.db "$ovnnb_schema"
 
+            ip_addr_add $controller_ip $device
+
             EXTRA_DBS="ovnsb.db ovnnb.db"
-            OVSDB_REMOTE="--remote=ptcp:6640:$controller_ip"
+            OVSDB_REMOTE="--remote=ptcp:6640:$CON_IP"
         fi
     fi
 
@@ -504,7 +500,7 @@ function start_ovs {
         run ovs-vsctl --no-wait set open_vswitch . system-type="sandbox"
 
         if $ovn ; then
-            OVN_REMOTE="tcp:$controller_ip:6640"
+            OVN_REMOTE="tcp:$CON_IP:6640"
 
             ip_addr_add $host_ip $device
 

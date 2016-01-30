@@ -22,6 +22,8 @@ from rally.deployment.serverprovider import provider
 from . import get_script
 from . import get_updated_server
 from . import OVS_USER
+from ...consts import ResourceType
+
 
 from sandbox import SandboxEngine
 
@@ -36,15 +38,21 @@ class OvnSandboxControllerEngine(SandboxEngine):
 
     {
         "type": "OvnSandboxControllerEngine",
+        "deployment_name": "ovn-controller-node",
+        "ovs_repo": "https://github.com/openvswitch/ovs.git",
+        "ovs_branch": "branch-2.5",
+        "ovs_user": "rally",
+        "net_dev": "eth1",
+        "controller_cidr": "192.168.10.10/16",
         "provider": {
             "type": "OvsSandboxProvider",
-            "deployment_name": "ovn-control-node",
             "credentials": [
                 {
                     "host": "192.168.20.10",
                     "user": "root"}
             ]
         }
+    }
     
     """
     
@@ -56,9 +64,12 @@ class OvnSandboxControllerEngine(SandboxEngine):
             "ovs_repo": {"type": "string"},
             "ovs_branch": {"type": "string"},
             "ovs_user": {"type": "string"},
+            "net_dev": {"type": "string"},
+            "controller_cidr": {"type": "string",
+                                "pattern": "^(\d+\.){3}\d+\/\d+$"},
             "provider": {"type": "object"},
         },
-        "required": ["type", "provider"]
+        "required": ["type", "controller_cidr", "provider"]
     }
     def __init__(self, deployment):
         super(OvnSandboxControllerEngine, self).__init__(deployment)
@@ -72,33 +83,36 @@ class OvnSandboxControllerEngine(SandboxEngine):
         server = self.servers[0]# only support to deploy controller node
                                 # on one server  
         
-        self._prepare_server(server)
+        self._deploy(server)
         
-        self.deployment.add_resource(provider_name="OvnSandboxControllerEngine",
-                                 type="credentials",
-                                 info=server.get_credentials())
+        deployment_name = self.deployment["name"]
+        if not deployment_name:
+            deployment_name = self.config.get("deployment_name", None)
         
-  
         ovs_user = self.config.get("ovs_user", OVS_USER)
+        ovs_controller_cidr = self.config.get("controller_cidr")
+        net_dev = self.config.get("net_dev", "eth0")
         
+        cmd = "/bin/bash -s - --controller --ovn --controller-ip %s --device %s" % \
+                        (ovs_controller_cidr, net_dev)
+        
+        # start ovn controller with non-root user
         ovs_server = get_updated_server(server, user=ovs_user)
-        
-        ovs_host_ip = server.host
-        
-        cmd = "/bin/bash -s - --controller --ovn --controller-ip %s" % \
-                        (ovs_host_ip)
-                        
-        ovs_server.ssh.run("pwd", stdout=sys.stdout, stderr=sys.stderr);
-                                        
-        ovs_server.ssh.run(cmd, stdin=get_script("ovs-sandbox-deploy.sh"),
+        ovs_server.ssh.run(cmd, stdin=get_script("ovs-sandbox.sh"),
                             stdout=sys.stdout, stderr=sys.stderr);
 
+        self.deployment.add_resource(provider_name="OvnSandboxControllerEngine",
+                                 type=ResourceType.CREDENTIAL,
+                                 info=ovs_server.get_credentials())
         
-        credential = objects.Credential(server.host, 
-                            server.user, server.password)
+        self.deployment.add_resource(provider_name="OvnSandboxControllerEngine",
+                            type=ResourceType.CONTROLLER,
+                            info={
+                                  "ip":ovs_controller_cidr.split('/')[0],
+                                  "deployment_name":deployment_name})
         
         
-        return {"admin": credential}
+        return {"admin": None}
         
     def cleanup(self):    
         """Cleanup OVN deployment."""
