@@ -61,9 +61,6 @@ class OvnMultihostEngine(engine.Engine):
                                     "%s-controller" % self.deployment["name"])
         self.controller.deployment.update_name(name)
         
-        credential = self.credentials["admin"]
-        self.controller_ip = "" # TODO
-        
         
         if "nodes" in self.config:
             for i in range(len(self.config["nodes"])):

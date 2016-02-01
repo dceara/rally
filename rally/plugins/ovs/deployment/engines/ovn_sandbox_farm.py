@@ -105,3 +105,14 @@ class OvnSandboxFarmEngine(SandboxEngine):
     def cleanup(self):    
         """Cleanup OVN deployment."""
         
+        for resource in self.deployment.get_resources():
+            if resource["type"] == ResourceType.CREDENTIAL:
+                server = provider.Server.from_credentials(resource.info)
+
+                cmd = "/bin/bash -s - --controller --ovn --cleanup"
+                    
+                server.ssh.run(cmd, stdin=get_script("ovs-sandbox.sh"),
+                            stdout=sys.stdout, stderr=sys.stderr)
+
+            #self.deployment.delete_resource(resource.id)
+        

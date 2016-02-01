@@ -35,7 +35,6 @@ ovnnb_schema=
 controller_ip="127.0.0.1"
 host_ip="127.0.0.1/8"
 device="eth0"
-index=0
 
 session=false
 do_cleanup=false
@@ -86,11 +85,9 @@ Other options:
   -c, --controller-ip  The IP of the controller node
   -H, --host-ip        The host ip of the sandbox
   -D, --device         The network device which has the host ip, default is eth0
-  -I, --index          The index of sandbox
   -S, --session        Open a bash for running OVN/OVS tools in the
                        dummy Open vSwitch environment
-  --cleanup            Cleanup the sandbox, if not controller, the index MUST be
-                       specified.
+  --cleanup            Cleanup the sandbox
 EOF
             exit 0
             ;;
@@ -127,9 +124,6 @@ EOF
             ;;
         -c|--controller)
             controller=true;
-            ;;
-        -I|--index)
-            prev=index
             ;;
         -S|--session)
             session=true;
@@ -249,24 +243,16 @@ else
     ovnnb_schema=`dirname $schema`/ovn-nb.ovsschema
 fi
 
-# Create sandbox.
-if $controller; then
-    sandbox_name="controller-sandbox"
-else
-    sandbox_name="sandbox-$index"
-fi
-
-sandbox=`pwd`/$sandbox_name
 
 
 function app_exit {
     local proc=$1
     local pid=
 
-    if [ -f $sandbox/$proc.pid ] ; then
+    if [ -f $OVS_RUNDIR/$proc.pid ] ; then
         echo "$proc exit"
-        pid=`cat $sandbox/$proc.pid`
-        ovs-appctl --timeout 3 -t $sandbox/$proc.$pid.ctl exit || kill $pid
+        pid=`cat $OVS_RUNDIR/$proc.pid`
+        ovs-appctl --timeout 2 -t $OVS_RUNDIR/$proc.$pid.ctl exit || kill $pid
     fi
 }
 
@@ -373,17 +359,29 @@ function ip_cidr_fixup {
 #
 # IP related code end
 #
-# Get ip addresses on net device
-get_ip_cidrs $device
-host_ip=`ip_cidr_fixup $host_ip`
+
+# Create sandbox.
+if $controller; then
+    sandbox_name="controller-sandbox"
+else
+    sandbox_name="sandbox-`get_ip_from_cidr $host_ip`"
+fi
+
+sandbox=`pwd`/$sandbox_name
 
 
 function cleanup {
 
-    if [ ! -d $sandbox_name ] ; then
-        echo "Not found sandbox $sandbox_name"
+    local box_name=$1
+
+    if [ ! -d $box_name ] || [ ! -f $box_name/sandbox.rc ] ; then
+        echo "Not found sandbox $box_name"
         return
     fi
+
+    echo "CLEANUP: $box_name"
+
+    . $box_name/sandbox.rc 2>/dev/null
 
     app_exit ovn-northd
     app_exit ovn-controller
@@ -391,34 +389,52 @@ function cleanup {
     app_exit ovs-vswitchd
 
     # Ensure cleanup.
-    pids=`cat "$sandbox_name"/*.pid 2>/dev/null`
+    pids=`cat "$box_name"/*.pid 2>/dev/null`
     [ -n "$pids" ] && kill -15 $pids
 
-    if $controller; then
-        :
-    else
-        ip_addr_del $host_ip $device
+
+    if [ X"$SANDBOX_BIND_IP" != X"" ] ; then
+        get_ip_cidrs $SANDBOX_BIND_DEV
+        ip_addr_del $SANDBOX_BIND_IP $SANDBOX_BIND_DEV
     fi
 
-    rm -rf $sandbox_name
+    rm -rf $box_name
+}
+
+
+function cleanup_all {
+
+    local all
+    for i in `ls -d *sandbox*`; do
+        if [ ! -d $i ] || [ ! -f $i/sandbox.rc ]; then
+            continue
+        fi
+        all="$all $i"
+    done
+
+    echo $all
+
+    for i in $all; do
+        cleanup $i
+    done
 }
 
 
 if $do_cleanup ; then
-    cleanup
+    cleanup_all
     exit 0
 fi
 
-cleanup
+cleanup $sandbox_name
+
+# Get ip addresses on net device
+get_ip_cidrs $device
+host_ip=`ip_cidr_fixup $host_ip`
+
 mkdir $sandbox_name
 
 
 # Set up environment for OVS programs to sandbox themselves.
-OVS_RUNDIR=$sandbox; export OVS_RUNDIR
-OVS_LOGDIR=$sandbox; export OVS_LOGDIR
-OVS_DBDIR=$sandbox; export OVS_DBDIR
-OVS_SYSCONFDIR=$sandbox; export OVS_SYSCONFDIR
-
 cat > $sandbox_name/sandbox.rc <<EOF
 OVS_RUNDIR=$sandbox; export OVS_RUNDIR
 OVS_LOGDIR=$sandbox; export OVS_LOGDIR
@@ -426,6 +442,7 @@ OVS_DBDIR=$sandbox; export OVS_DBDIR
 OVS_SYSCONFDIR=$sandbox; export OVS_SYSCONFDIR
 EOF
 
+. $sandbox_name/sandbox.rc
 
 # A UUID to uniquely identify this system.  If one is not specified, a random
 # one will be generated.  A randomly generated UUID will be saved in a file
@@ -458,6 +475,7 @@ function start_ovs {
     CON_IP=`get_ip_from_cidr $controller_ip`
     echo "controller ip: $CON_IP"
 
+    SANDBOX_BIND_IP=""
     EXTRA_DBS=""
     OVSDB_REMOTE=""
     if $controller ; then
@@ -468,6 +486,7 @@ function start_ovs {
             run ovsdb-tool create ovnnb.db "$ovnnb_schema"
 
             ip_addr_add $controller_ip $device
+            SANDBOX_BIND_IP=$controller_ip
 
             EXTRA_DBS="ovnsb.db ovnnb.db"
             OVSDB_REMOTE="--remote=ptcp:6640:$CON_IP"
@@ -475,7 +494,7 @@ function start_ovs {
     fi
 
     run ovsdb-server --detach --no-chdir --pidfile \
-        -vconsole:off --verbose --log-file \
+        -vconsole:off -vsyslog:off -vfile:warn --log-file \
         --remote=punix:"$sandbox"/db.sock \
         $OVSDB_REMOTE \
         conf.db $EXTRA_DBS
@@ -503,6 +522,7 @@ function start_ovs {
             OVN_REMOTE="tcp:$CON_IP:6640"
 
             ip_addr_add $host_ip $device
+            SANDBOX_BIND_IP=$host_ip
 
             run ovs-vsctl --no-wait set open_vswitch . external-ids:system-id="$OVN_UUID"
             ovs-vsctl --no-wait set open_vswitch . external-ids:ovn-remote="$OVN_REMOTE"
@@ -515,13 +535,18 @@ function start_ovs {
             ovs-vsctl --no-wait set bridge br-int fail-mode=secure other-config:disable-in-band=true
 
             run ovs-vswitchd --detach --no-chdir --pidfile \
-                            -vconsole:off --log-file \
-                            --enable-dummy=override -vvconn -vnetdev_dummy
+                            -vconsole:off -vsyslog:off -vfile:warn --log-file \
+                            --enable-dummy=override # -vvconn:info -vnetdev_dummy:info
 
         else
             :
         fi
     fi
+
+    cat >> $sandbox_name/sandbox.rc <<EOF
+SANDBOX_BIND_IP=$SANDBOX_BIND_IP; export SANDBOX_BIND_IP
+SANDBOX_BIND_DEV=$device; export SANDBOX_BIND_DEV
+EOF
 
 
 }
@@ -531,10 +556,12 @@ function start_ovn {
     echo "Starting OVN"
 
     if $controller ; then
-        run ovn-northd --detach --no-chdir --pidfile -vconsole:off --log-file
+        run ovn-northd --detach --no-chdir --pidfile \
+              -vconsole:off -vsyslog:off -vfile:warn --log-file
     else
         if $ovn ; then
-            run ovn-controller --detach --no-chdir --pidfile -vconsole:off --log-file
+            run ovn-controller --detach --no-chdir --pidfile \
+                    -vconsole:off -vsyslog:off -vfile:warn --log-file
         fi
     fi
 }
