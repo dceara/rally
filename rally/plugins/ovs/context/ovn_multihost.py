@@ -11,6 +11,7 @@ from rally.common import logging
 from rally.common import db
 from rally.common import objects
 from rally import consts
+from rally import exceptions
 from rally.task import context
 from ..consts import ResourceType
 from .. import utils  
@@ -64,6 +65,21 @@ class OvnMultihost(context.Context):
         
         multihost_info = get_ovn_multihost_info(multihost_uuid, controller_name)
         self.context["ovn_multihost"] = multihost_info
+        
+        try:
+            controller_dep = db.deployment_get(controller_name)
+        except exceptions.DeploymentNotFound:
+            raise
+
+        try:
+            res = db.resource_get_all(controller_dep["uuid"], 
+                                        type=ResourceType.CONTROLLER)[0]
+        except:
+            raise exceptions.GetResourceNotFound(resource="controller")
+
+        
+        self.context["controller"] = res["info"]
+        
         
         
     @logging.log_task_wrapper(LOG.info, _("Exit context: `network`"))

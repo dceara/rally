@@ -344,6 +344,9 @@ function ip_addr_del {
 
     echo "Delete $ip from $dev"
     sudo ip addr del $ip dev $dev
+
+    IP_CIDR_ARRAY=( ${IP_CIDR_ARRAY[@]/"$ip"/} )
+    #echo IP_CIDR_ARRAY: ${IP_CIDR_ARRAY[@]}
 }
 
 function ip_cidr_fixup {

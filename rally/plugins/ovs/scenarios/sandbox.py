@@ -28,13 +28,13 @@ class SandboxScenario(scenario.OvsScenario):
         print("create sandbox")
                 
         amount = sandbox_create_args.get("amount", 1)
+        batch = sandbox_create_args.get("batch", 1)
         
         farm = sandbox_create_args.get("farm")
-        # xxx: get controller_ip from resources table
-        controller_ip = sandbox_create_args.get("controller_ip") 
+        controller_ip = self.context["controller"]["ip"]
+        
         start_cidr = sandbox_create_args.get("start_cidr")
         net_dev = sandbox_create_args.get("net_dev", "eth0")
-        # xxx: check start_cidr and controller_ip in same network
         
         if controller_ip == None:
             raise exceptions.NoSuchConfigField(name="controller_ip")
@@ -51,16 +51,30 @@ class SandboxScenario(scenario.OvsScenario):
         
         ssh = self.farm_clients(farm)
         
-        for i in range(amount):
-            farm_host_ip = str(sandbox_hosts.next())
-            cmd = "/bin/bash -s - --ovn --controller-ip %s \
-                --host-ip %s/%d --device %s --index %d" % \
-                (controller_ip, farm_host_ip, sandbox_cidr.prefixlen,
-                 net_dev, i)
+        batch_left = min(batch, amount)
+        i = 0
+        while i < amount:
+            
+            i += batch_left
+            host_ip_list = []
+            while batch_left > 0:
+                host_ip_list.append(str(sandbox_hosts.next()))
+                batch_left -= 1
+            
+            cmds = []
+            for host_ip in host_ip_list:
+                cmd = "./ovs-sandbox.sh --ovn --controller-ip %s \
+                             --host-ip %s/%d --device %s" % \
+                         (controller_ip, host_ip, sandbox_cidr.prefixlen,
+                                net_dev)
+                cmds.append(cmd)
         
-            ssh.run(cmd, stdin=get_script("ovs-sandbox.sh"),
+            ssh.run(";".join(cmds),
                                 stdout=sys.stdout, stderr=sys.stderr);
         
+            batch_left = min(batch, amount - i)
+            if batch_left <= 0:
+                break;
     
     @atomic.action_timer("sandbox.delete_sandbox")
     def _delete_sandbox(self, sandbox):

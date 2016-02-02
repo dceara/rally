@@ -61,6 +61,8 @@ class OvnSandboxControllerEngine(SandboxEngine):
         "properties": {
             "type": {"type": "string"},
             "deployment_name": {"type": "string"},
+            "http_proxy": {"type": "string"},
+            "https_proxy": {"type": "string"},
             "ovs_repo": {"type": "string"},
             "ovs_branch": {"type": "string"},
             "ovs_user": {"type": "string"},
@@ -75,6 +77,8 @@ class OvnSandboxControllerEngine(SandboxEngine):
         super(OvnSandboxControllerEngine, self).__init__(deployment)
         
 
+    
+    
 
     @logging.log_deploy_wrapper(LOG.info, _("Deploy ovn sandbox controller"))
     def deploy(self):
@@ -93,12 +97,15 @@ class OvnSandboxControllerEngine(SandboxEngine):
         ovs_controller_cidr = self.config.get("controller_cidr")
         net_dev = self.config.get("net_dev", "eth0")
         
-        cmd = "/bin/bash -s - --controller --ovn --controller-ip %s --device %s" % \
-                        (ovs_controller_cidr, net_dev)
-        
+
         # start ovn controller with non-root user
         ovs_server = get_updated_server(server, user=ovs_user)
-        ovs_server.ssh.run(cmd, stdin=get_script("ovs-sandbox.sh"),
+           
+        cmd = "./ovs-sandbox.sh --controller --ovn \
+                            --controller-ip %s --device %s;" % \
+                        (ovs_controller_cidr, net_dev)
+        
+        ovs_server.ssh.run(cmd,
                             stdout=sys.stdout, stderr=sys.stderr)
 
         self.deployment.add_resource(provider_name="OvnSandboxControllerEngine",
@@ -120,12 +127,13 @@ class OvnSandboxControllerEngine(SandboxEngine):
             if resource["type"] == ResourceType.CREDENTIAL:
                 server = provider.Server.from_credentials(resource.info)
 
-                cmd = "/bin/bash -s - --controller --ovn --cleanup"
-                    
-                server.ssh.run(cmd, stdin=get_script("ovs-sandbox.sh"),
-                            stdout=sys.stdout, stderr=sys.stderr)
+                cmd = "[ -x ovs-sandbox.sh ] && ./ovs-sandbox.sh --cleanup"
 
-            #self.deployment.delete_resource(resource.id)
+                server.ssh.run(cmd,
+                            stdout=sys.stdout, stderr=sys.stderr,
+                            raise_on_error=False)
+
+            self.deployment.delete_resource(resource.id)
 
 
 

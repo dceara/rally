@@ -62,6 +62,8 @@ class OvnSandboxFarmEngine(SandboxEngine):
         "properties": {
             "type": {"type": "string"},
             "deployment_name": {"type": "string"},
+            "http_proxy": {"type": "string"},
+            "https_proxy": {"type": "string"},
             "ovs_repo": {"type": "string"},
             "ovs_user": {"type": "string"},
             "ovs_branch": {"type": "string"},
@@ -109,10 +111,11 @@ class OvnSandboxFarmEngine(SandboxEngine):
             if resource["type"] == ResourceType.CREDENTIAL:
                 server = provider.Server.from_credentials(resource.info)
 
-                cmd = "/bin/bash -s - --controller --ovn --cleanup"
-                    
-                server.ssh.run(cmd, stdin=get_script("ovs-sandbox.sh"),
-                            stdout=sys.stdout, stderr=sys.stderr)
+                cmd = "[ -x ovs-sandbox.sh ] && ./ovs-sandbox.sh --cleanup"
 
-            #self.deployment.delete_resource(resource.id)
+                server.ssh.run(cmd,
+                            stdout=sys.stdout, stderr=sys.stderr,
+                            raise_on_error=False)
+
+            self.deployment.delete_resource(resource.id)
         

@@ -36,21 +36,6 @@ class OvnMultihostEngine(engine.Engine):
         return deployer, credentials
 
 
-
-    def _update_controller_ip(self, obj):
-        if isinstance(obj, dict):
-            keyval = six.iteritems(obj)
-        elif isinstance(obj, list):
-            keyval = enumerate(obj)
-
-        for key, value in keyval:
-            if isinstance(value, six.string_types):
-                obj[key] = value.format(controller_ip=self.controller_ip)
-            elif type(value) in (dict, list):
-                self._update_controller_ip(value)
-        
-
-
     
     def deploy(self):
         self.deployment.update_status(consts._DeployStatus.DEPLOY_SUBDEPLOY)
@@ -65,7 +50,6 @@ class OvnMultihostEngine(engine.Engine):
         if "nodes" in self.config:
             for i in range(len(self.config["nodes"])):
                 node_config = self.config["nodes"][i]
-                self._update_controller_ip(node_config)
                 
                 node, credential = self._deploy_node(node_config)
                 name = node.config.get("deployment_name", 
