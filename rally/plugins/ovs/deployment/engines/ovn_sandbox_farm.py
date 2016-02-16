@@ -98,6 +98,10 @@ class OvnSandboxFarmEngine(SandboxEngine):
                                  type=ResourceType.CREDENTIAL,
                                  info=credential)
         
+        dep_name = self.deployment["name"]
+        self.deployment.add_resource(dep_name, 
+                             ResourceType.SANDBOXES, 
+                             info={"farm": dep_name, "sandboxes": []})
         
         return {"admin": None}
         

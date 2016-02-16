@@ -11,6 +11,7 @@ from rally.common import utils
 class _ResourceType(utils.ImmutableMixin, utils.EnumMixin):
     CREDENTIAL = "credential"
     CONTROLLER = "controller"
+    SANDBOXES = "sandboxes"
     
 ResourceType = _ResourceType()
 

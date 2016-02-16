@@ -13,6 +13,10 @@ from rally.common import objects
 from rally.common import sshutils
 
 from rally.deployment.serverprovider import provider
+
+import ovsclients
+
+
 import itertools
 
 from consts import ResourceType
@@ -25,31 +29,32 @@ class OvsScenario(scenario.Scenario):
     
     
     
-    def __init__(self, context=None, clients=None):
+    def __init__(self, context=None):
         super(OvsScenario, self).__init__(context)
         
         multihost_info = context["ovn_multihost"]
         
         for k,v in six.iteritems(multihost_info["controller"]):
             cred = v["credential"]
-            self._controller_client = get_ssh_from_credential(cred)
+            self._controller_clients = ovsclients.Clients(cred)
             
         
         self._farm_clients = {}
         for k,v in six.iteritems(multihost_info["farms"]):
             cred = v["credential"]
-            ssh = get_ssh_from_credential(cred)
-            self._farm_clients[k] = ssh
+            self._farm_clients[k] = ovsclients.Clients(cred)
         
     
-    def controller_client(self, client_type=None):
-        return self._controller_client
+    def controller_client(self, client_type="ssh"):
+        client = getattr(self._controller_clients, client_type)
+        return client()
     
     
-    def farm_clients(self, name, client_type=None):
-        return self._farm_clients[name]
     
-
+    def farm_clients(self, name, client_type="ssh"):
+        clients = self._farm_clients[name]
+        client = getattr(clients, client_type)
+        return client()
     
 
 

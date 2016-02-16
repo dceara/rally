@@ -253,6 +253,7 @@ function app_exit {
         echo "$proc exit"
         pid=`cat $OVS_RUNDIR/$proc.pid`
         ovs-appctl --timeout 2 -t $OVS_RUNDIR/$proc.$pid.ctl exit || kill $pid
+        rm -f $OVS_RUNDIR/$proc.$pid.ctl # the file was renamed, remove it forcely
     fi
 }
 
@@ -387,6 +388,8 @@ function cleanup {
     . $box_name/sandbox.rc 2>/dev/null
 
     app_exit ovn-northd
+    app_exit ovsdb-server-nb
+    app_exit ovsdb-server-sb
     app_exit ovn-controller
     app_exit ovsdb-server
     app_exit ovs-vswitchd
@@ -467,13 +470,27 @@ function configure_ovn {
 
 
 
+function init_ovsdb_server {
+
+    server_name=$1
+    db=$2
+    db_sock=`basename $2`
+
+    #Wait for ovsdb-server to finish launching.
+    echo -n "Waiting for $server_name to start..."
+    while test ! -e "$sandbox"/$db_sock; do
+        sleep 1;
+    done
+    echo "  Done"
+
+    run ovs-vsctl --db=$db --no-wait -- init
+}
+
+
 
 function start_ovs {
     # Create database and start ovsdb-server.
     echo "Starting OVS"
-
-    touch "$sandbox"/.conf.db.~lock~
-    run ovsdb-tool create conf.db "$schema"
 
     CON_IP=`get_ip_from_cidr $controller_ip`
     echo "controller ip: $CON_IP"
@@ -483,6 +500,12 @@ function start_ovs {
     OVSDB_REMOTE=""
     if $controller ; then
         if $ovn ; then
+
+            touch "$sandbox"/.conf-nb.db.~lock~
+            touch "$sandbox"/.conf-sb.db.~lock~
+            run ovsdb-tool create conf-nb.db "$schema"
+            run ovsdb-tool create conf-sb.db "$schema"
+
             touch "$sandbox"/.ovnsb.db.~lock~
             touch "$sandbox"/.ovnnb.db.~lock~
             run ovsdb-tool create ovnsb.db "$ovnsb_schema"
@@ -491,34 +514,62 @@ function start_ovs {
             ip_addr_add $controller_ip $device
             SANDBOX_BIND_IP=$controller_ip
 
-            EXTRA_DBS="ovnsb.db ovnnb.db"
-            OVSDB_REMOTE="--remote=ptcp:6640:$CON_IP"
+            OVSDB_REMOTE="ptcp\:6640\:$CON_IP"
+
+            cat >> $sandbox_name/sandbox.rc <<EOF
+OVN_NB_DB=unix:$sandbox/db-nb.sock; export OVN_NB_DB
+OVN_SB_DB=unix:$sandbox/db-sb.sock; export OVN_SB_DB
+EOF
+            . $sandbox_name/sandbox.rc
+
+            # Northbound db server
+            prog_name='ovsdb-server-nb'
+            run ovsdb-server --detach --no-chdir --pidfile=$prog_name.pid \
+                --unixctl=$prog_name.ctl \
+                -vconsole:off -vsyslog:off -vfile:info --log-file \
+                --remote="p$OVN_NB_DB" \
+                conf-nb.db ovnnb.db
+            pid=`cat $sandbox_name/$prog_name.pid`
+            mv $sandbox_name/$prog_name.ctl $sandbox_name/$prog_name.$pid.ctl
+
+            # Southbound db server
+            prog_name='ovsdb-server-sb'
+            run ovsdb-server --detach --no-chdir --pidfile=$prog_name.pid \
+                --unixctl=$prog_name.ctl \
+                -vconsole:off -vsyslog:off -vfile:info --log-file \
+                --remote="p$OVN_SB_DB" \
+                --remote=db:Open_vSwitch,Open_vSwitch,manager_options \
+                conf-sb.db ovnsb.db
+            pid=`cat $sandbox_name/$prog_name.pid`
+            mv $sandbox_name/$prog_name.ctl $sandbox_name/$prog_name.$pid.ctl
+
         fi
+    else
+        touch "$sandbox"/.conf.db.~lock~
+        run ovsdb-tool create conf.db "$schema"
+
+        run ovsdb-server --detach --no-chdir --pidfile \
+            -vconsole:off -vsyslog:off -vfile:info --log-file \
+            --remote=punix:"$sandbox"/db.sock \
+            conf.db
     fi
 
-    run ovsdb-server --detach --no-chdir --pidfile \
-        -vconsole:off -vsyslog:off -vfile:warn --log-file \
-        --remote=punix:"$sandbox"/db.sock \
-        $OVSDB_REMOTE \
-        conf.db $EXTRA_DBS
 
 
     #Add a small delay to allow ovsdb-server to launch.
     sleep 0.1
 
-    #Wait for ovsdb-server to finish launching.
-    echo -n "Waiting for ovsdb-server to start..."
-    while test ! -e "$sandbox"/db.sock; do
-        sleep 1;
-    done
-    echo "  Done"
-
-    run ovs-vsctl --no-wait -- init
     # Initialize database.
     if $controller ; then
-        :
-    else
+        init_ovsdb_server "ovsdb-server-nb" $OVN_NB_DB
+        init_ovsdb_server "ovsdb-server-sb" $OVN_SB_DB
 
+        ovs-vsctl --db=$OVN_SB_DB --no-wait \
+            -- set open_vswitch .  manager_options=@uuid \
+            -- --id=@uuid create Manager target="$OVSDB_REMOTE" inactivity_probe=0
+
+    else
+        init_ovsdb_server "ovsdb-server" unix:"$sandbox"/db.sock
         run ovs-vsctl --no-wait set open_vswitch . system-type="sandbox"
 
         if $ovn ; then
@@ -538,7 +589,7 @@ function start_ovs {
             ovs-vsctl --no-wait set bridge br-int fail-mode=secure other-config:disable-in-band=true
 
             run ovs-vswitchd --detach --no-chdir --pidfile \
-                            -vconsole:off -vsyslog:off -vfile:warn --log-file \
+                            -vconsole:off -vsyslog:off -vfile:info --log-file \
                             --enable-dummy=override # -vvconn:info -vnetdev_dummy:info
 
         else
@@ -560,11 +611,13 @@ function start_ovn {
 
     if $controller ; then
         run ovn-northd --detach --no-chdir --pidfile \
-              -vconsole:off -vsyslog:off -vfile:warn --log-file
+              -vconsole:off -vsyslog:off -vfile:info --log-file \
+              --ovnnb-db=$OVN_NB_DB \
+              --ovnsb-db=$OVN_SB_DB
     else
         if $ovn ; then
             run ovn-controller --detach --no-chdir --pidfile \
-                    -vconsole:off -vsyslog:off -vfile:warn --log-file
+                    -vconsole:off -vsyslog:off -vfile:info --log-file
         fi
     fi
 }

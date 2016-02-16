@@ -15,8 +15,30 @@ from rally.common import objects
 
 from ..deployment.engines import get_script 
 from netaddr.ip import IPRange
+from ..consts import ResourceType
+
 
 class SandboxScenario(scenario.OvsScenario):
+    
+    
+    
+    """
+        @param farm_dep  A name or uuid of farm deployment
+        @param sandboxes A list of sandboxes' name
+    """
+    def _add_sandbox_resource(self, farm_dep, sandboxes):
+        dep = objects.Deployment.get(farm_dep)
+        res = dep.get_resources(type=ResourceType.SANDBOXES)[0]
+        
+        info = res["info"]
+        sandbox_set = set(info["sandboxes"])
+        sandbox_set |= set(sandboxes)
+        info["sandboxes"] = list(sandbox_set)
+        res.update({"info": info})
+        res.save()
+
+
+    
     
     
     @atomic.action_timer("sandbox.create_sandbox")
@@ -51,6 +73,8 @@ class SandboxScenario(scenario.OvsScenario):
         
         ssh = self.farm_clients(farm)
         
+        
+        sandboxes = []
         batch_left = min(batch, amount)
         i = 0
         while i < amount:
@@ -68,6 +92,7 @@ class SandboxScenario(scenario.OvsScenario):
                          (controller_ip, host_ip, sandbox_cidr.prefixlen,
                                 net_dev)
                 cmds.append(cmd)
+                sandboxes.append("sandbox-%s" % host_ip)
         
             ssh.run(";".join(cmds),
                                 stdout=sys.stdout, stderr=sys.stderr);
@@ -76,6 +101,8 @@ class SandboxScenario(scenario.OvsScenario):
             if batch_left <= 0:
                 break;
     
+        self._add_sandbox_resource(farm, sandboxes)
+        
     @atomic.action_timer("sandbox.delete_sandbox")
     def _delete_sandbox(self, sandbox):
         print("delete sandbox")
