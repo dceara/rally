@@ -27,9 +27,10 @@ class OvnMultihostEngine(engine.Engine):
         self.nodes = []
 
 
-    def _deploy_node(self, config):
+    def _deploy_node(self, config, name):
         deployment = objects.Deployment(config=config,
                                         parent_uuid=self.deployment["uuid"])
+        deployment.update_name(name)
         deployer = engine.Engine.get_engine(config["type"], deployment)
         with deployer:
             credentials = deployer.make_deploy()
@@ -39,22 +40,21 @@ class OvnMultihostEngine(engine.Engine):
     
     def deploy(self):
         self.deployment.update_status(consts._DeployStatus.DEPLOY_SUBDEPLOY)
-        self.controller, self.credentials = self._deploy_node(
-                    self.config["controller"])
-    
-        name = self.controller.config.get("deployment_name", 
-                                    "%s-controller" % self.deployment["name"])
-        self.controller.deployment.update_name(name)
         
+        controller_config = self.config["controller"]
+        name = controller_config.get("deployment_name",  
+                                     "%s-controller" % self.deployment["name"])
+        self.controller, self.credentials = self._deploy_node(
+                    controller_config, name)
+    
         
         if "nodes" in self.config:
             for i in range(len(self.config["nodes"])):
                 node_config = self.config["nodes"][i]
                 
-                node, credential = self._deploy_node(node_config)
-                name = node.config.get("deployment_name", 
+                name = node_config.get("deployment_name", 
                             "%s-node-%d" % (self.deployment["name"], i))
-                node.deployment.update_name(name)
+                node, credential = self._deploy_node(node_config, name)
                 self.nodes.append(node)
         
         return self.credentials        

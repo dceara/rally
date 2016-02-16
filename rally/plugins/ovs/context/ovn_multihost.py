@@ -57,7 +57,7 @@ class OvnMultihost(context.Context):
     DEFAULT_CONFIG = {
     }
     
-    @logging.log_task_wrapper(LOG.info, _("Enter context: `ovn_controller`"))
+    @logging.log_task_wrapper(LOG.info, _("Enter context: `ovn_multihost`"))
     def setup(self):
         
         multihost_uuid = self.task["deployment_uuid"]
@@ -82,7 +82,7 @@ class OvnMultihost(context.Context):
         
         
         
-    @logging.log_task_wrapper(LOG.info, _("Exit context: `network`"))
+    @logging.log_task_wrapper(LOG.info, _("Exit context: `ovn_multihost`"))
     def cleanup(self):
         pass
         

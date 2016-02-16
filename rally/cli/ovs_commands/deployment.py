@@ -24,6 +24,8 @@ from rally.cli import envutils
 from rally.common import fileutils
 from rally.common.i18n import _
 from rally.common import utils
+from rally.common import db
+from rally.common import objects
 from rally import exceptions
 from rally import plugins
 
@@ -100,6 +102,12 @@ class DeploymentCommands(object):
 
         :param deployment: UUID or name of the deployment
         """
+        dep = objects.Deployment.get(deployment)
+        tasks = db.task_list(deployment=dep["uuid"])
+        for task in tasks:
+            api.Task.delete(task["uuid"], True)
+        
+        
         api.Deployment.destroy(deployment)        
 
 

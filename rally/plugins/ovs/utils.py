@@ -4,6 +4,8 @@
 # @author: lhuang8
 #
 
+import random
+
 from consts import ResourceType
 from rally.common import sshutils
 from rally.common import objects
@@ -38,3 +40,25 @@ def get_ssh_client_from_deployment(deployment):
 
     return get_ssh_from_credential(cred)
 
+
+
+
+def get_random_mac(base_mac):
+    mac = [int(base_mac[0], 16), int(base_mac[1], 16),
+           int(base_mac[2], 16), random.randint(0x00, 0xff),
+           random.randint(0x00, 0xff), random.randint(0x00, 0xff)]
+    if base_mac[3] != '00':
+        mac[3] = int(base_mac[3], 16)
+    return ':'.join(["%02x" % x for x in mac])
+
+
+def py_to_val(pyval):
+    """Convert python value to ovs-vsctl value argument"""
+    if isinstance(pyval, bool):
+        return 'true' if pyval is True else 'false'
+    elif pyval == '':
+        return '""'
+    else:
+        return pyval
+    
+    
