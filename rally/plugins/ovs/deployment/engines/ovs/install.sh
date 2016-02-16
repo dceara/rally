@@ -39,7 +39,7 @@ function install_ovs {
     mkdir build
     cd build
     ../configure --with-linux=/lib/modules/`uname -r`/build
-    make -j 2
+    make -j 6
     sudo make install
     sudo make INSTALL_MOD_DIR=kernel/net/openvswitch modules_install
 

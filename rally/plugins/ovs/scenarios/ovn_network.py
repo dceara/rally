@@ -7,11 +7,14 @@
 
 import random
 
+from rally.common import logging
 from rally.plugins.ovs.scenarios import ovn
 
 from rally.task import scenario
 from rally.task import validation
 from ..utils import get_random_mac
+
+LOG = logging.getLogger(__name__)
 
 
 
@@ -35,11 +38,10 @@ class OvnNetwork(ovn.OvnScenario):
                               ports_per_network=None):
         
         lswitches = self._create_lswitch(network_create_args)
-        lports = None
+        lports = []
         
         for lswitch in lswitches:
-            lports = self._create_lport(lswitch, port_create_args, ports_per_network)
-        
+            lports += self._create_lport(lswitch, port_create_args, ports_per_network)
         
         sandbox_info = self.context["sandboxes"]
         
@@ -47,6 +49,8 @@ class OvnNetwork(ovn.OvnScenario):
         for lport in lports:
             farm, sandbox = get_random_sandbox(sandbox_info)
             port_name = lport["name"]
+            
+            LOG.debug("bind %s to %s on %s" % (port_name, sandbox, farm))
             
             ovs_vsctl = self.farm_clients(farm, "ovs-vsctl")
             ovs_vsctl.set_sandbox(sandbox)
