@@ -80,11 +80,10 @@ class SandboxEngine(engine.Engine):
             cmd = '''cat > proxy_env.sh <<EOF
 export http_proxy=$http_proxy 
 export https_proxy=$https_proxy
-EOF
-'''
+EOF'''
             cmds.append(cmd)
             cmds.append("echo 'use http proxy in proxy_env.sh")
-            cmds.append(". proxy_env.sh;")
+            cmds.append(". proxy_env.sh")
         
         
         cmd = "./install.sh %s %s %s" % (ovs_repo, ovs_branch, ovs_user)
