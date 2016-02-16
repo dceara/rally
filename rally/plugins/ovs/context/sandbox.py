@@ -44,7 +44,7 @@ class Sandbox(context.Context):
         sandboxes = []
         for dep in deployments:
             res = db.resource_get_all(dep["uuid"], type=ResourceType.SANDBOXES)
-            if len(res) == 0: 
+            if len(res) == 0 or len(res[0].info["sandboxes"]) == 0: 
                 continue
             
             info = copy.deepcopy(res[0].info)

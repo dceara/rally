@@ -78,18 +78,18 @@ class SandboxEngine(engine.Engine):
         cmds = []
         if http_proxy or https_proxy :
             cmd = '''cat > proxy_env.sh <<EOF
-export http_proxy=$http_proxy 
-export https_proxy=$https_proxy
-EOF'''
+export http_proxy=%s
+export https_proxy=%s
+EOF''' % (http_proxy, https_proxy)
             cmds.append(cmd)
-            cmds.append("echo 'use http proxy in proxy_env.sh")
+            cmds.append("echo 'use http proxy in proxy_env.sh'")
             cmds.append(". proxy_env.sh")
         
         
         cmd = "./install.sh %s %s %s" % (ovs_repo, ovs_branch, ovs_user)
         cmds.append(cmd)
-        
-        ovs_server.ssh.run(";".join(cmds),
+        print("install ovs:", cmds)
+        ovs_server.ssh.run("\n".join(cmds),
                             stdout=sys.stdout, stderr=sys.stderr);
 
  
