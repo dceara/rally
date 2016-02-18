@@ -254,6 +254,7 @@ function app_exit {
         pid=`cat $OVS_RUNDIR/$proc.pid`
         ovs-appctl --timeout 2 -t $OVS_RUNDIR/$proc.$pid.ctl exit || kill $pid
         rm -f $OVS_RUNDIR/$proc.$pid.ctl # the file was renamed, remove it forcely
+        [ -n "$pid" ] && kill -15 $pid
     fi
 }
 

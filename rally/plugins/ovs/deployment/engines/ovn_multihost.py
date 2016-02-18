@@ -20,7 +20,7 @@ class OvnMultihostEngine(engine.Engine):
     """Deploy multihost cloud with existing engines.
 
 
-    """    
+    """
     def __init__(self, *args, **kwargs):
         super(OvnMultihostEngine, self).__init__(*args, **kwargs)
         self.config = self.deployment["config"]
@@ -37,30 +37,33 @@ class OvnMultihostEngine(engine.Engine):
         return deployer, credentials
 
 
-    
+
     def deploy(self):
         self.deployment.update_status(consts._DeployStatus.DEPLOY_SUBDEPLOY)
-        
+
         controller_config = self.config["controller"]
-        name = controller_config.get("deployment_name",  
+        name = controller_config.get("deployment_name",
                                      "%s-controller" % self.deployment["name"])
         self.controller, self.credentials = self._deploy_node(
                     controller_config, name)
-    
-        
+
+
         if "nodes" in self.config:
             for i in range(len(self.config["nodes"])):
                 node_config = self.config["nodes"][i]
-                
-                name = node_config.get("deployment_name", 
+
+                name = node_config.get("deployment_name",
                             "%s-node-%d" % (self.deployment["name"], i))
                 node, credential = self._deploy_node(node_config, name)
                 self.nodes.append(node)
-        
-        return self.credentials        
-    
-    
+
+        return self.credentials
+
+
     def cleanup(self):
         subdeploys = db.deployment_list(parent_uuid=self.deployment["uuid"])
+        subdeploys.reverse() # destroy in reversed order
         for subdeploy in subdeploys:
             rally.api.Deployment.destroy(subdeploy["uuid"])
+
+
