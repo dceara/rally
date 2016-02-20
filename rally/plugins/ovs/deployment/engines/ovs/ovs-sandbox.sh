@@ -527,7 +527,8 @@ EOF
             prog_name='ovsdb-server-nb'
             run ovsdb-server --detach --no-chdir --pidfile=$prog_name.pid \
                 --unixctl=$prog_name.ctl \
-                -vconsole:off -vsyslog:off -vfile:info --log-file \
+                -vconsole:off -vsyslog:off -vfile:info \
+		--log-file=$prog_name.log \
                 --remote="p$OVN_NB_DB" \
                 conf-nb.db ovnnb.db
             pid=`cat $sandbox_name/$prog_name.pid`
@@ -537,7 +538,8 @@ EOF
             prog_name='ovsdb-server-sb'
             run ovsdb-server --detach --no-chdir --pidfile=$prog_name.pid \
                 --unixctl=$prog_name.ctl \
-                -vconsole:off -vsyslog:off -vfile:info --log-file \
+                -vconsole:off -vsyslog:off -vfile:info \
+		--log-file=$prog_name.log \
                 --remote="p$OVN_SB_DB" \
                 --remote=db:Open_vSwitch,Open_vSwitch,manager_options \
                 conf-sb.db ovnsb.db
