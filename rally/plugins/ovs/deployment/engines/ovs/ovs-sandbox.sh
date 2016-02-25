@@ -583,6 +583,7 @@ EOF
 
             run ovs-vsctl --no-wait set open_vswitch . external-ids:system-id="$OVN_UUID"
             ovs-vsctl --no-wait set open_vswitch . external-ids:ovn-remote="$OVN_REMOTE"
+            ovs-vsctl --no-wait set open_vswitch . external-ids:ovn-remote-probe-interval=0
             ovs-vsctl --no-wait set open_vswitch . external-ids:ovn-bridge="br-int"
             ovs-vsctl --no-wait set open_vswitch . external-ids:ovn-encap-type="geneve"
             ovs-vsctl --no-wait set open_vswitch . external-ids:ovn-encap-ip="$host_ip"

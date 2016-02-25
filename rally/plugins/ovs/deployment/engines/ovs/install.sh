@@ -3,11 +3,13 @@
 OVS_REPO=$1
 OVS_BRANCH=$2
 OVS_USER=$3
+REPO_ACTION=$4
 
 
 echo "OVS_REPO: $OVS_REPO"
 echo "OVS_BRANCH: $OVS_BRANCH"
 echo "OVS_USER: $OVS_USER"
+echo "REPO_ACTION: $REPO_ACTION"
 
 function is_ovs_installed {
     local installed=0
@@ -56,9 +58,17 @@ function install_ovs {
 }
 
 
+if  ! is_ovs_installed || [ X$REPO_ACTION != X ] ; then
 
-if ! is_ovs_installed; then
-    echo "Install ovs"
+    if [ X$REPO_ACTION = X"reclone" ] ; then
+        echo "Reclone ovs"
+        sudo rm -rf ovs
+    elif [ X$REPO_ACTION = X"pull" ] ; then
+        echo "Pull ovs"
+    else
+        echo "Install ovs"
+    fi
+
     install_ovs
 fi
 
