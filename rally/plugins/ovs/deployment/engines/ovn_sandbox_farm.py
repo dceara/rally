@@ -35,8 +35,8 @@ LOG = logging.getLogger(__name__)
 
 @engine.configure(name="OvnSandboxFarmEngine", namespace="ovs")
 class OvnSandboxFarmEngine(SandboxEngine):
-    """ Deploy ovn sandbox controller 
-    
+    """ Deploy ovn sandbox controller
+
     Sample configuration:
 
     {
@@ -54,9 +54,9 @@ class OvnSandboxFarmEngine(SandboxEngine):
             ]
         }
     }
-    
+
     """
-    
+
     CONFIG_SCHEMA = {
         "type": "object",
         "properties": {
@@ -71,46 +71,47 @@ class OvnSandboxFarmEngine(SandboxEngine):
         },
         "required": ["type", "provider"]
     }
-    
-    
+
+
     def __init__(self, deployment):
         super(OvnSandboxFarmEngine, self).__init__(deployment)
-       
 
-    
+
+
     def validate(self):
         super(OvnSandboxFarmEngine, self).validate()
-        
+
 
     @logging.log_deploy_wrapper(LOG.info, _("Deploy ovn sandbox farm"))
     def deploy(self):
         self.servers = self.get_provider().create_servers()
-        
-        server = self.servers[0] 
-        
+
+        server = self.servers[0]
+        dep_name = self.deployment["name"]
+        LOG.info("Deploy farm node %s" % dep_name)
         self._deploy(server)
-        
+
         ovs_user = self.config.get("ovs_user", OVS_USER)
         credential = server.get_credentials()
         credential["user"] = ovs_user
-        
+
         self.deployment.add_resource(provider_name="OvnSandboxFarmEngine",
                                  type=ResourceType.CREDENTIAL,
                                  info=credential)
-        
-        dep_name = self.deployment["name"]
-        self.deployment.add_resource(dep_name, 
-                             ResourceType.SANDBOXES, 
+
+
+        self.deployment.add_resource(dep_name,
+                             ResourceType.SANDBOXES,
                              info={"farm": dep_name, "sandboxes": []})
-        
+
         return {"admin": None}
-        
-        
-        
-        
-    def cleanup(self):    
+
+
+
+
+    def cleanup(self):
         """Cleanup OVN deployment."""
-        
+
         for resource in self.deployment.get_resources():
             if resource["type"] == ResourceType.CREDENTIAL:
                 server = provider.Server.from_credentials(resource.info)
@@ -122,4 +123,4 @@ class OvnSandboxFarmEngine(SandboxEngine):
                             raise_on_error=False)
 
             self.deployment.delete_resource(resource.id)
-        
+

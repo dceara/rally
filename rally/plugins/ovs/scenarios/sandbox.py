@@ -33,7 +33,15 @@ class SandboxScenario(scenario.OvsScenario):
         info = res["info"]
         sandbox_set = set(info["sandboxes"])
         sandbox_set |= set(sandboxes)
-        info["sandboxes"] = list(sandbox_set)
+
+
+        for i in sandbox_set:
+            if sandboxes.has_key(i):
+                continue
+            sandboxes[i] = info["sandboxes"][i]
+
+
+        info["sandboxes"] = sandboxes
         res.update({"info": info})
         res.save()
 
@@ -58,6 +66,7 @@ class SandboxScenario(scenario.OvsScenario):
 
         start_cidr = sandbox_create_args.get("start_cidr")
         net_dev = sandbox_create_args.get("net_dev", "eth0")
+        tag = sandbox_create_args.get("tag", "")
 
         if controller_ip == None:
             raise exceptions.NoSuchConfigField(name="controller_ip")
@@ -75,7 +84,7 @@ class SandboxScenario(scenario.OvsScenario):
         ssh = self.farm_clients(farm)
 
 
-        sandboxes = []
+        sandboxes = {}
         batch_left = min(batch, amount)
         i = 0
         while i < amount:
@@ -93,7 +102,8 @@ class SandboxScenario(scenario.OvsScenario):
                          (controller_ip, host_ip, sandbox_cidr.prefixlen,
                                 net_dev)
                 cmds.append(cmd)
-                sandboxes.append("sandbox-%s" % host_ip)
+
+                sandboxes["sandbox-%s" % host_ip] = tag
 
             self._do_create_sandbox(ssh, cmds)
 

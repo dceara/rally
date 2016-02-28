@@ -9,6 +9,7 @@ from rally.plugins.ovs import scenario
 from rally.task import atomic
 from rally.common import logging
 import random
+from ..utils import get_random_sandbox
 
 LOG = logging.getLogger(__name__)
 
@@ -157,6 +158,36 @@ class OvnScenario(scenario.OvsScenario):
             ovn_nbctl.acl_del(lswitch["name"])
 
         ovn_nbctl.flush()
+
+
+
+    @atomic.action_timer("ovn.bind_port")
+    def _bind_port(self, lports, sandboxes, wait_up):
+        ovn_nbctl = self.controller_client("ovn-nbctl")
+        ovn_nbctl.set_sandbox("controller-sandbox")
+        ovn_nbctl.enable_batch_mode(False)
+
+        for lport in lports:
+            farm, sandbox = get_random_sandbox(sandboxes)
+            port_name = lport["name"]
+
+            LOG.debug("bind %s to %s on %s" % (port_name, sandbox, farm))
+
+            ovs_vsctl = self.farm_clients(farm, "ovs-vsctl")
+            ovs_vsctl.set_sandbox(sandbox)
+            ovs_vsctl.enable_batch_mode()
+
+            ovs_vsctl.add_port('br-int', port_name)
+            ovs_vsctl.db_set('Interface', port_name,
+                             ('external_ids', {"iface-id":port_name,
+                                               "iface-status":"active"}),
+                             ('admin_state', 'up'))
+
+            ovs_vsctl.flush()
+
+            if wait_up:
+                ovn_nbctl.wait_until('Logical_Port', port_name, ('up', 'true'))
+
 
 
 

@@ -125,12 +125,30 @@ def get_lswitch_info(info):
     return lswitches
 
 
+class DdCtlMixin(object):
+
+    def get(self, table, record, *col_values):
+        args = [table, record]
+        args += _set_colval_args(*col_values)
+        self.run("get", args=args)
+
+
+    def list(self, table, records):
+        args = [table]
+        args += records
+        self.run("list", args=args)
+
+    def wait_until(self, table, record, *col_values):
+        args = [table, record]
+        args += _set_colval_args(*col_values)
+        self.run("wait-until", args=args)
+
 
 @configure("ovn-nbctl")
 class OvnNbctl(OvsClient):
 
 
-    class _OvnNbctl(object):
+    class _OvnNbctl(DdCtlMixin):
         def __init__(self, credential):
             self.ssh = get_ssh_from_credential(credential)
             self.context = {}
