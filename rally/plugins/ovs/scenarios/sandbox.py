@@ -21,6 +21,33 @@ from ..consts import ResourceType
 class SandboxScenario(scenario.OvsScenario):
 
 
+    def _add_controller_resource(self, deployment, controller_cidr):
+        dep = objects.Deployment.get(deployment)
+        resources = dep.get_resources(type=ResourceType.CONTROLLER)
+        if resources == None:
+            dep.add_resource(provider_name=deployment,
+                            type=ResourceType.CONTROLLER,
+                            info={"ip":controller_cidr.split('/')[0],
+                                  "deployment_name":deployment})
+            return
+
+        resources[0].update({"info": {"ip":controller_cidr.split('/')[0],
+                                        "deployment_name":deployment}})
+        resources[0].save()
+
+
+
+    def _create_controller(self, dep_name, controller_cidr, net_dev):
+
+        cmd = "./ovs-sandbox.sh --controller --ovn \
+                            --controller-ip %s --device %s;" % \
+                            (controller_cidr, net_dev)
+        ssh = self.controller_client()
+        ssh.run(cmd, stdout=sys.stdout, stderr=sys.stderr)
+
+        self._add_controller_resource(dep_name, controller_cidr)
+
+
 
     """
         @param farm_dep  A name or uuid of farm deployment

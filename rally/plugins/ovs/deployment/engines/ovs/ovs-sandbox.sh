@@ -592,6 +592,9 @@ EOF
             ovs-vsctl --no-wait br-set-external-id br-int bridge-id br-int
             ovs-vsctl --no-wait set bridge br-int fail-mode=secure other-config:disable-in-band=true
 
+            ovs-vsctl --no-wait --may-exist add-br br0
+            ovs-vsctl --no-wait set open_vswitch . external-ids:ovn-bridge-mappings=providernet:br0
+
             run ovs-vswitchd --detach --no-chdir --pidfile \
                             -vconsole:off -vsyslog:off -vfile:info --log-file \
                             --enable-dummy=override # -vvconn:info -vnetdev_dummy:info

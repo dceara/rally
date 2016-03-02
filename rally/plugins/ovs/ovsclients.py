@@ -231,6 +231,22 @@ class OvnNbctl(OvsClient):
             self.run("lport-del", args=params)
 
 
+        def lport_set_addresses(self, name, *addresses):
+            params = [name]
+            params += addresses
+            self.run("lport-set-addresses", args=params)
+
+
+        def lport_set_type(self, name, type):
+            params = [name, type]
+            self.run("lport-set-type", args=params)
+
+
+        def lport_set_options(self, name, *options):
+            params = [name]
+            params += options
+            self.run("lport-set-options", args=params)
+
         def acl_add(self, lswitch, direction, priority, match, action,
                     log=False):
             opts = ["--log"] if log else []
