@@ -32,7 +32,12 @@ class OvnNetwork(ovn.OvnScenario):
                               ports_per_network=None):
 
         wait_up = port_create_args.get("wait_up", False)
-        sandboxes = self.context["sandboxes"]
+        sandboxes = []
+
+        for i in self.context["sandboxes"]:
+            if len(i["sandboxes"]) < 1:
+                continue
+            sandboxes += [i]
 
         lswitches = self._create_lswitch(network_create_args)
         for lswitch in lswitches:

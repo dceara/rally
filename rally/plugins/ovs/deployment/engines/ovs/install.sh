@@ -36,7 +36,8 @@ function install_ovs {
     fi
 
     sudo apt-get install -y --force-yes gcc make automake autoconf \
-                      libtool libcap-ng0 libssl1.0.0
+                      libtool libcap-ng0 libssl1.0.0 python-pip
+    sudo pip install -i http://installsvc.vip/packages/pypi/data/web/simple/  six
     ./boot.sh
     mkdir build
     cd build

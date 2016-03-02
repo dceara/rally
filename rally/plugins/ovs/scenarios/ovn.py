@@ -171,7 +171,7 @@ class OvnScenario(scenario.OvsScenario):
             farm, sandbox = get_random_sandbox(sandboxes)
             port_name = lport["name"]
 
-            LOG.debug("bind %s to %s on %s" % (port_name, sandbox, farm))
+            LOG.info("bind %s to %s on %s" % (port_name, sandbox, farm))
 
             ovs_vsctl = self.farm_clients(farm, "ovs-vsctl")
             ovs_vsctl.set_sandbox(sandbox)
