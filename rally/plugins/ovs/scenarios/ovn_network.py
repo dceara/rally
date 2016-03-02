@@ -22,6 +22,9 @@ class OvnNetwork(ovn.OvnScenario):
     """scenarios for OVN network."""
 
 
+    @scenario.configure(context={})
+    def create_networks(self, network_create_args):
+        self._create_networks(network_create_args)
 
 
     @validation.number("ports_per_network", minval=1, integer_only=True)
@@ -29,9 +32,9 @@ class OvnNetwork(ovn.OvnScenario):
     def create_and_bind_ports(self,
                               network_create_args=None,
                               port_create_args=None,
-                              ports_per_network=None):
+                              ports_per_network=None,
+                              port_wait_up=False):
 
-        wait_up = port_create_args.get("wait_up", False)
         sandboxes = []
 
         for i in self.context["sandboxes"]:
@@ -39,10 +42,10 @@ class OvnNetwork(ovn.OvnScenario):
                 continue
             sandboxes += [i]
 
-        lswitches = self._create_lswitch(network_create_args)
+        lswitches = self._create_networks(network_create_args)
         for lswitch in lswitches:
             lports = self._create_lport(lswitch, port_create_args, ports_per_network)
-            self._bind_port(lports, sandboxes, wait_up)
+            self._bind_port(lports, sandboxes, port_wait_up)
 
 
     def bind_ports(self):

@@ -28,7 +28,8 @@ function install_ovs {
     if [ -d ovs ] ; then
         cd ovs
         echo "git pull"
-        git pull
+        git fetch --all
+        git reset --hard origin/master
     else
         echo "git clone -b $OVS_BRANCH $OVS_REPO"
         git clone -b $OVS_BRANCH $OVS_REPO

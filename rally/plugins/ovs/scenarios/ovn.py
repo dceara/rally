@@ -161,7 +161,30 @@ class OvnScenario(scenario.OvsScenario):
 
 
 
-    @atomic.action_timer("ovn.bind_port")
+    @atomic.action_timer("ovn_network.create_network")
+    def _create_networks(self, network_create_args):
+        physnet = network_create_args.get("physical_network", None)
+        lswitches = self._create_lswitch(network_create_args)
+
+        if physnet != None:
+            ovn_nbctl = self.controller_client("ovn-nbctl")
+            ovn_nbctl.set_sandbox("controller-sandbox")
+            ovn_nbctl.enable_batch_mode()
+
+            for lswitch in lswitches:
+                network = lswitch["name"]
+                port = "provnet-%s" % network
+                ovn_nbctl.lport_add(network, port)
+                ovn_nbctl.lport_set_addresses(port, "unknown")
+                ovn_nbctl.lport_set_type(port, "localnet")
+                ovn_nbctl.lport_set_options(port, "network_name=%s" % physnet)
+                ovn_nbctl.flush()
+
+        return lswitches
+
+
+
+    @atomic.action_timer("ovn_network.bind_port")
     def _bind_port(self, lports, sandboxes, wait_up):
         ovn_nbctl = self.controller_client("ovn-nbctl")
         ovn_nbctl.set_sandbox("controller-sandbox")

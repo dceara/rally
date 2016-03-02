@@ -41,7 +41,7 @@ class Sandbox(context.Context):
         deploy_uuid = self.task["deployment_uuid"]
         deployments = db.deployment_list(parent_uuid=deploy_uuid)
 
-        tag = self.config.get("tag", None)
+        tag = self.config.get("tag", "")
 
         sandboxes = []
         for dep in deployments:
@@ -51,10 +51,9 @@ class Sandbox(context.Context):
 
             info = copy.deepcopy(res[0].info)
             sandbox_list = []
-            if tag:
-                for k,v in six.iteritems(info["sandboxes"]):
-                    if v == tag:
-                        sandbox_list.append(k)
+            for k,v in six.iteritems(info["sandboxes"]):
+                if v == tag:
+                    sandbox_list.append(k)
 
             info["sandboxes"] = sandbox_list
 

@@ -37,7 +37,7 @@ class OvnNorthbound(ovn.OvnScenario):
 
     @validation.number("lports_per_lswitch", minval=1, integer_only=True)
     @scenario.configure(context={})
-    def create_and_list_lport(self,
+    def create_and_list_lports(self,
                               lswitch_create_args=None,
                               lport_create_args=None,
                               lports_per_lswitch=None):
@@ -88,7 +88,7 @@ class OvnNorthbound(ovn.OvnScenario):
     @validation.number("lports_per_lswitch", minval=1, integer_only=True)
     @validation.number("acls_per_port", minval=1, integer_only=True)
     @scenario.configure(context={})
-    def create_and_list_acl(self,
+    def create_and_list_acls(self,
                               lswitch_create_args=None,
                               lport_create_args=None,
                               lports_per_lswitch=None,
@@ -106,7 +106,7 @@ class OvnNorthbound(ovn.OvnScenario):
 
 
     @scenario.configure(context={})
-    def cleanup_acl(self):
+    def cleanup_acls(self):
 
         lswitches = self.context["ovn-nb"]
 
