@@ -230,11 +230,22 @@ class OvnNbctl(OvsClient):
             params = [name]
             self.run("lport-del", args=params)
 
-
+        '''
+        param address: [mac,ip], [mac] ...
+        '''
         def lport_set_addresses(self, name, *addresses):
             params = [name]
-            params += addresses
+
+            for i in addresses:
+                params += ["\ ".join(i)]
+
             self.run("lport-set-addresses", args=params)
+
+
+        def lport_set_port_security(self, name, *addresses):
+            params = [name]
+            params += addresses
+            self.run("lport-set-port-security", args=params)
 
 
         def lport_set_type(self, name, type):

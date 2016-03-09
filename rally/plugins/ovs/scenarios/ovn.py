@@ -8,10 +8,14 @@
 from rally.plugins.ovs import scenario
 from rally.task import atomic
 from rally.common import logging
+from rally import exceptions
 import random
 from ..utils import get_random_sandbox
+from .. import utils
+import netaddr
 
 LOG = logging.getLogger(__name__)
+
 
 
 class OvnScenario(scenario.OvsScenario):
@@ -19,6 +23,10 @@ class OvnScenario(scenario.OvsScenario):
 
     RESOURCE_NAME_FORMAT = "lswitch_XXXXXX_XXXXXX"
 
+
+    '''
+    return: [{"name": "lswitch_xxxx_xxxxx", "cidr": netaddr.IPNetwork}, ...]
+    '''
     @atomic.action_timer("ovn.create_lswitch")
     def _create_lswitch(self, lswitch_create_args):
 
@@ -26,6 +34,9 @@ class OvnScenario(scenario.OvsScenario):
         self.RESOURCE_NAME_FORMAT = "lswitch_XXXXXX_XXXXXX"
 
         amount = lswitch_create_args.get("amount", 1)
+        start_cidr = lswitch_create_args.get("start_cidr", "")
+        if start_cidr:
+            start_cidr = netaddr.IPNetwork(start_cidr)
 
         ovn_nbctl = self.controller_client("ovn-nbctl")
         ovn_nbctl.set_sandbox("controller-sandbox")
@@ -36,7 +47,13 @@ class OvnScenario(scenario.OvsScenario):
             name = self.generate_random_name()
 
             lswitch = ovn_nbctl.lswitch_add(name)
+            if start_cidr:
+                lswitch["cidr"] = start_cidr.next(i)
+
+            LOG.info("create %(name)s %(cidr)s" % \
+                      {"name": name, "cidr":lswitch["cidr"]})
             lswitches.append(lswitch)
+
         ovn_nbctl.flush()
         ovn_nbctl.enable_batch_mode(False)
         return lswitches
@@ -70,20 +87,46 @@ class OvnScenario(scenario.OvsScenario):
 
     @atomic.action_timer("ovn.create_lport")
     def _create_lport(self, lswitch, lport_create_args = [], lport_amount=1):
-        LOG.info("create %d lports on lswitch %s" % (lport_amount, lswitch))
+        LOG.info("create %d lports on lswitch %s" % \
+                            (lport_amount, lswitch["name"]))
+
+        self.RESOURCE_NAME_FORMAT = "lport_XXXXXX_XXXXXX"
+
+        network_cidr = lswitch.get("cidr", None)
+        ip_addrs = None
+        if network_cidr:
+            end_ip = network_cidr.ip + lport_amount
+            if not end_ip in network_cidr:
+                message = _("Network %s's size is not big enough for %d lports.")
+                raise exceptions.InvalidConfigException(
+                            message  % (network_cidr, lport_amount))
+
+            ip_addrs = netaddr.iter_iprange(network_cidr.ip, network_cidr.last)
+
         ovn_nbctl = self.controller_client("ovn-nbctl")
         ovn_nbctl.set_sandbox("controller-sandbox")
         ovn_nbctl.enable_batch_mode()
-        self.RESOURCE_NAME_FORMAT = "lport_XXXXXX_XXXXXX"
+
+        base_mac = [i[:2] for i in self.task["uuid"].split('-')]
+        base_mac[3:] = ['00']*3
+
         lports = []
         for i in range(lport_amount):
             name = self.generate_random_name()
             lport = ovn_nbctl.lport_add(lswitch["name"], name)
+
+            ip = str(ip_addrs.next()) if ip_addrs else ""
+            mac = utils.get_random_mac(base_mac)
+
+            ovn_nbctl.lport_set_addresses(name, [mac, ip])
+            ovn_nbctl.lport_set_port_security(name, mac)
+
             lports.append(lport)
 
         ovn_nbctl.flush()
         ovn_nbctl.enable_batch_mode(False)
         return lports
+
 
     @atomic.action_timer("ovn.delete_lport")
     def _delete_lport(self, lports):
@@ -175,7 +218,7 @@ class OvnScenario(scenario.OvsScenario):
                 network = lswitch["name"]
                 port = "provnet-%s" % network
                 ovn_nbctl.lport_add(network, port)
-                ovn_nbctl.lport_set_addresses(port, "unknown")
+                ovn_nbctl.lport_set_addresses(port, ["unknown"])
                 ovn_nbctl.lport_set_type(port, "localnet")
                 ovn_nbctl.lport_set_options(port, "network_name=%s" % physnet)
                 ovn_nbctl.flush()
@@ -186,9 +229,6 @@ class OvnScenario(scenario.OvsScenario):
 
     @atomic.action_timer("ovn_network.bind_port")
     def _bind_port(self, lports, sandboxes, wait_up):
-        ovn_nbctl = self.controller_client("ovn-nbctl")
-        ovn_nbctl.set_sandbox("controller-sandbox")
-        ovn_nbctl.enable_batch_mode(False)
 
         for lport in lports:
             farm, sandbox = get_random_sandbox(sandboxes)
@@ -205,14 +245,24 @@ class OvnScenario(scenario.OvsScenario):
                              ('external_ids', {"iface-id":port_name,
                                                "iface-status":"active"}),
                              ('admin_state', 'up'))
-
             ovs_vsctl.flush()
 
-            if wait_up:
-                ovn_nbctl.wait_until('Logical_Port', port_name, ('up', 'true'))
+
+        if wait_up:
+            self._wait_up_port(lports)
 
 
+    @atomic.action_timer("ovn_network.wait_port_up")
+    def _wait_up_port(self, lports):
+        LOG.info("wait port up" )
+        ovn_nbctl = self.controller_client("ovn-nbctl")
+        ovn_nbctl.set_sandbox("controller-sandbox")
+        ovn_nbctl.enable_batch_mode(True)
 
+        for lport in lports:
+            ovn_nbctl.wait_until('Logical_Port', lport["name"], ('up', 'true'))
+
+        ovn_nbctl.flush()
 
 
 

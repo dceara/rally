@@ -27,9 +27,28 @@ function install_ovs {
     echo "PWD: $PWD"
     if [ -d ovs ] ; then
         cd ovs
-        echo "git pull"
+
         git fetch --all
-        git reset --hard origin/master
+        LOCAL=$(git rev-parse @)
+        REMOTE=$(git rev-parse @{u})
+        BASE=$(git merge-base @ @{u})
+
+        if [ $LOCAL = $REMOTE ]; then
+            echo "ovs is up-to-date"
+            return
+        elif [ $LOCAL = $BASE ]; then
+            echo "git pull"
+            git rebase
+            # git reset --hard origin/master
+        elif [ $REMOTE = $BASE ]; then
+            echo "need to push"
+            return
+        else
+            echo "ovs is diverged"
+            return
+        fi
+
+
     else
         echo "git clone -b $OVS_BRANCH $OVS_REPO"
         git clone -b $OVS_BRANCH $OVS_REPO
@@ -37,12 +56,12 @@ function install_ovs {
     fi
 
     sudo apt-get install -y --force-yes gcc make automake autoconf \
-                      libtool libcap-ng0 libssl1.0.0 python-pip
+                      libtool libjemalloc1 libcap-ng0 libssl1.0.0 python-pip
     sudo pip install -i http://installsvc.vip/packages/pypi/data/web/simple/  six
     ./boot.sh
     mkdir build
     cd build
-    ../configure --with-linux=/lib/modules/`uname -r`/build
+    ../configure --enable-jemalloc --with-linux=/lib/modules/`uname -r`/build
     make -j 6
     sudo make install
     sudo make INSTALL_MOD_DIR=kernel/net/openvswitch modules_install

@@ -5,10 +5,17 @@
 #
 
 import random
+import netaddr
 
 from consts import ResourceType
 from rally.common import sshutils
 from rally.common import objects
+from rally.common import utils
+
+
+cidr_incr = utils.RAMInt()
+
+
 '''
     Find credential resource from DB by deployment uuid, and return
     info as a dict.
@@ -57,6 +64,23 @@ def get_random_mac(base_mac):
     if base_mac[3] != '00':
         mac[3] = int(base_mac[3], 16)
     return ':'.join(["%02x" % x for x in mac])
+
+
+
+def generate_cidr(start_cidr="10.2.0.0/24"):
+    """Generate next CIDR for network or subnet, without IP overlapping.
+
+    This is process and thread safe, because `cidr_incr' points to
+    value stored directly in RAM. This guarantees that CIDRs will be
+    serial and unique even under hard multiprocessing/threading load.
+
+    :param start_cidr: start CIDR str
+    :returns: next available CIDR str
+    """
+    cidr = str(netaddr.IPNetwork(start_cidr).next(next(cidr_incr)))
+    return cidr
+
+
 
 
 def py_to_val(pyval):
