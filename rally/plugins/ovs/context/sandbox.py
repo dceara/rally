@@ -49,16 +49,11 @@ class Sandbox(context.Context):
             if len(res) == 0 or len(res[0].info["sandboxes"]) == 0:
                 continue
 
-            info = copy.deepcopy(res[0].info)
-            sandbox_list = []
+            info = res[0].info
             for k,v in six.iteritems(info["sandboxes"]):
                 if v == tag:
-                    sandbox_list.append(k)
-
-            info["sandboxes"] = sandbox_list
-
-            sandboxes.append(info)
-
+                    sandbox = {"name": k, "tag": v, "farm": info["farm"]}
+                    sandboxes.append(sandbox)
 
         self.context["sandboxes"] = sandboxes
 

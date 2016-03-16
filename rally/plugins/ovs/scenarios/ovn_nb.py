@@ -18,13 +18,13 @@ class OvnNorthbound(ovn.OvnScenario):
 
     @scenario.configure(context={})
     def create_and_list_lswitch(self, lswitch_create_args=None):
-        self._create_lswitch(lswitch_create_args)
+        self._create_lswitches(lswitch_create_args)
         self._list_lswitches()
 
 
     @scenario.configure(context={})
     def create_and_delete_lswitch(self, lswitch_create_args=None):
-        lswitches = self._create_lswitch(lswitch_create_args or {})
+        lswitches = self._create_lswitches(lswitch_create_args or {})
         self._delete_lswitch(lswitches)
 
 
@@ -42,10 +42,10 @@ class OvnNorthbound(ovn.OvnScenario):
                               lport_create_args=None,
                               lports_per_lswitch=None):
 
-        lswitches = self._create_lswitch(lswitch_create_args)
+        lswitches = self._create_lswitches(lswitch_create_args)
 
         for lswitch in lswitches:
-            self._create_lport(lswitch, lport_create_args, lports_per_lswitch)
+            self._create_lports(lswitch, lport_create_args, lports_per_lswitch)
 
         self._list_lports(lswitches)
 
@@ -56,9 +56,9 @@ class OvnNorthbound(ovn.OvnScenario):
                               lport_create_args=None,
                               lports_per_lswitch=None):
 
-        lswitches = self._create_lswitch(lswitch_create_args)
+        lswitches = self._create_lswitches(lswitch_create_args)
         for lswitch in lswitches:
-            lports = self._create_lport(lswitch, lport_create_args,
+            lports = self._create_lports(lswitch, lport_create_args,
                                         lports_per_lswitch)
             self._delete_lport(lports)
 
@@ -73,9 +73,9 @@ class OvnNorthbound(ovn.OvnScenario):
 
         lswitches = None
         if lswitch_create_args != None:
-            lswitches = self._create_lswitch(lswitch_create_args)
+            lswitches = self._create_lswitches(lswitch_create_args)
             for lswitch in lswitches:
-                lports = self._create_lport(lswitch, lport_create_args,
+                lports = self._create_lports(lswitch, lport_create_args,
                                                     lports_per_lswitch)
                 lswitch["lports"] = lports
         else:

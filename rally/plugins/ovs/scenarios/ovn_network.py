@@ -33,19 +33,14 @@ class OvnNetwork(ovn.OvnScenario):
                               network_create_args=None,
                               port_create_args=None,
                               ports_per_network=None,
-                              port_wait_up=False):
+                              port_bind_args=None):
 
-        sandboxes = []
-
-        for i in self.context["sandboxes"]:
-            if len(i["sandboxes"]) < 1:
-                continue
-            sandboxes += [i]
+        sandboxes = self.context["sandboxes"]
 
         lswitches = self._create_networks(network_create_args)
         for lswitch in lswitches:
-            lports = self._create_lport(lswitch, port_create_args, ports_per_network)
-            self._bind_port(lports, sandboxes, port_wait_up)
+            lports = self._create_lports(lswitch, port_create_args, ports_per_network)
+            self._bind_ports(lports, sandboxes, port_bind_args)
 
 
     def bind_ports(self):

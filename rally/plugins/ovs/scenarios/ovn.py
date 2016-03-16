@@ -28,12 +28,13 @@ class OvnScenario(scenario.OvsScenario):
     return: [{"name": "lswitch_xxxx_xxxxx", "cidr": netaddr.IPNetwork}, ...]
     '''
     @atomic.action_timer("ovn.create_lswitch")
-    def _create_lswitch(self, lswitch_create_args):
+    def _create_lswitches(self, lswitch_create_args):
 
         print("create lswitch")
         self.RESOURCE_NAME_FORMAT = "lswitch_XXXXXX_XXXXXX"
 
         amount = lswitch_create_args.get("amount", 1)
+        batch = lswitch_create_args.get("batch", amount)
         start_cidr = lswitch_create_args.get("start_cidr", "")
         if start_cidr:
             start_cidr = netaddr.IPNetwork(start_cidr)
@@ -42,6 +43,7 @@ class OvnScenario(scenario.OvsScenario):
         ovn_nbctl.set_sandbox("controller-sandbox")
         ovn_nbctl.enable_batch_mode()
 
+        flush_count = batch
         lswitches = []
         for i in range(amount):
             name = self.generate_random_name()
@@ -54,7 +56,12 @@ class OvnScenario(scenario.OvsScenario):
                       {"name": name, "cidr":lswitch["cidr"]})
             lswitches.append(lswitch)
 
-        ovn_nbctl.flush()
+            flush_count -= 1
+            if flush_count < 1:
+                ovn_nbctl.flush()
+                flush_count = batch
+
+        ovn_nbctl.flush() # ensure all commands be run
         ovn_nbctl.enable_batch_mode(False)
         return lswitches
 
@@ -86,12 +93,13 @@ class OvnScenario(scenario.OvsScenario):
 
 
     @atomic.action_timer("ovn.create_lport")
-    def _create_lport(self, lswitch, lport_create_args = [], lport_amount=1):
+    def _create_lports(self, lswitch, lport_create_args = [], lport_amount=1):
         LOG.info("create %d lports on lswitch %s" % \
                             (lport_amount, lswitch["name"]))
 
         self.RESOURCE_NAME_FORMAT = "lport_XXXXXX_XXXXXX"
 
+        batch = lport_create_args.get("batch", lport_amount)
         network_cidr = lswitch.get("cidr", None)
         ip_addrs = None
         if network_cidr:
@@ -110,6 +118,8 @@ class OvnScenario(scenario.OvsScenario):
         base_mac = [i[:2] for i in self.task["uuid"].split('-')]
         base_mac[3:] = ['00']*3
 
+
+        flush_count = batch
         lports = []
         for i in range(lport_amount):
             name = self.generate_random_name()
@@ -123,7 +133,12 @@ class OvnScenario(scenario.OvsScenario):
 
             lports.append(lport)
 
-        ovn_nbctl.flush()
+            flush_count -= 1
+            if flush_count < 1:
+                ovn_nbctl.flush()
+                flush_count = batch
+
+        ovn_nbctl.flush()  # ensure all commands be run
         ovn_nbctl.enable_batch_mode(False)
         return lports
 
@@ -207,7 +222,7 @@ class OvnScenario(scenario.OvsScenario):
     @atomic.action_timer("ovn_network.create_network")
     def _create_networks(self, network_create_args):
         physnet = network_create_args.get("physical_network", None)
-        lswitches = self._create_lswitch(network_create_args)
+        lswitches = self._create_lswitches(network_create_args)
 
         if physnet != None:
             ovn_nbctl = self.controller_client("ovn-nbctl")
@@ -221,32 +236,43 @@ class OvnScenario(scenario.OvsScenario):
                 ovn_nbctl.lport_set_addresses(port, ["unknown"])
                 ovn_nbctl.lport_set_type(port, "localnet")
                 ovn_nbctl.lport_set_options(port, "network_name=%s" % physnet)
-                ovn_nbctl.flush()
+
+            ovn_nbctl.flush()
 
         return lswitches
 
 
 
     @atomic.action_timer("ovn_network.bind_port")
-    def _bind_port(self, lports, sandboxes, wait_up):
+    def _bind_ports(self, lports, sandboxes, port_bind_args):
+        port_bind_args = port_bind_args or {}
+        wait_up = port_bind_args.get("wait_up", False)
 
-        for lport in lports:
-            farm, sandbox = get_random_sandbox(sandboxes)
-            port_name = lport["name"]
+        sandbox_num = len(sandboxes)
+        lport_num = len(lports)
+        lport_per_sandbox = (lport_num + sandbox_num - 1) / sandbox_num
 
-            LOG.info("bind %s to %s on %s" % (port_name, sandbox, farm))
+        j = 0
+        for i in range(0, len(lports), lport_per_sandbox):
+            lport_slice = lports[i:i+lport_per_sandbox]
 
+            sandbox = sandboxes[j]["name"]
+            farm = sandboxes[j]["farm"]
             ovs_vsctl = self.farm_clients(farm, "ovs-vsctl")
             ovs_vsctl.set_sandbox(sandbox)
             ovs_vsctl.enable_batch_mode()
+            for lport in lport_slice:
+                port_name = lport["name"]
 
-            ovs_vsctl.add_port('br-int', port_name)
-            ovs_vsctl.db_set('Interface', port_name,
-                             ('external_ids', {"iface-id":port_name,
-                                               "iface-status":"active"}),
-                             ('admin_state', 'up'))
+                LOG.info("bind %s to %s on %s" % (port_name, sandbox, farm))
+
+                ovs_vsctl.add_port('br-int', port_name)
+                ovs_vsctl.db_set('Interface', port_name,
+                                 ('external_ids', {"iface-id":port_name,
+                                                   "iface-status":"active"}),
+                                 ('admin_state', 'up'))
             ovs_vsctl.flush()
-
+            j += 1
 
         if wait_up:
             self._wait_up_port(lports)

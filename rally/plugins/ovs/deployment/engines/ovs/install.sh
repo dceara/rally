@@ -28,27 +28,19 @@ function install_ovs {
     if [ -d ovs ] ; then
         cd ovs
 
-        git fetch --all
-        LOCAL=$(git rev-parse @)
-        REMOTE=$(git rev-parse @{u})
-        BASE=$(git merge-base @ @{u})
-
-        if [ $LOCAL = $REMOTE ]; then
-            echo "ovs is up-to-date"
-            return
-        elif [ $LOCAL = $BASE ]; then
-            echo "git pull"
-            git rebase
-            # git reset --hard origin/master
-        elif [ $REMOTE = $BASE ]; then
-            echo "need to push"
-            return
+        if [ X$REPO_ACTION = X"rebuild" ]; then
+            echo "rebuild ovs with no repo change"
         else
-            echo "ovs is diverged"
-            return
+            git fetch --all
+            repo_change=`git rev-list HEAD...origin/master --count`
+            if [ $repo_change = "0" ]; then
+                echo "ovs is up-to-date"
+                return
+            else
+                echo "git pull"
+                git rebase
+            fi
         fi
-
-
     else
         echo "git clone -b $OVS_BRANCH $OVS_REPO"
         git clone -b $OVS_BRANCH $OVS_REPO
@@ -56,12 +48,13 @@ function install_ovs {
     fi
 
     sudo apt-get install -y --force-yes gcc make automake autoconf \
-                      libtool libjemalloc1 libcap-ng0 libssl1.0.0 python-pip
+                      libtool libcap-ng0 libssl1.0.0 python-pip \
+                      libjemalloc1 libjemalloc-dev
     sudo pip install -i http://installsvc.vip/packages/pypi/data/web/simple/  six
     ./boot.sh
     mkdir build
     cd build
-    ../configure --enable-jemalloc --with-linux=/lib/modules/`uname -r`/build
+    CFLAGS='-g' ../configure --enable-jemalloc --with-linux=/lib/modules/`uname -r`/build
     make -j 6
     sudo make install
     sudo make INSTALL_MOD_DIR=kernel/net/openvswitch modules_install
@@ -86,6 +79,8 @@ if  ! is_ovs_installed || [ X$REPO_ACTION != X ] ; then
         sudo rm -rf ovs
     elif [ X$REPO_ACTION = X"pull" ] ; then
         echo "Pull ovs"
+    elif [ X$REPO_ACTION = X"rebuild" ]; then
+        echo "Rebuild ovs"
     else
         echo "Install ovs"
     fi
