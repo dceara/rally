@@ -29,10 +29,17 @@ class OvnNorthbound(ovn.OvnScenario):
 
 
     @scenario.configure(context={})
-    def cleanup_lswitch(self):
-        lswitches = self.context.get("ovn-nb", [])
+    def cleanup_lswitches(self, lswitch_cleanup_args=None):
+        lswitch_cleanup_args = lswitch_cleanup_args or {}
+        prefix = lswitch_cleanup_args.get("prefix", "")
 
-        self._delete_lswitch(lswitches)
+        lswitches = self.context.get("ovn-nb", [])
+        matched_lswitches = []
+        for lswitch in lswitches:
+            if lswitch["name"].find(prefix) == 0:
+                matched_lswitches.append(lswitch)
+
+        self._delete_lswitch(matched_lswitches)
 
 
     @validation.number("lports_per_lswitch", minval=1, integer_only=True)
