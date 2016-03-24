@@ -54,7 +54,7 @@ function install_ovs {
     ./boot.sh
     mkdir build
     cd build
-    CFLAGS='-g' ../configure --enable-jemalloc --with-linux=/lib/modules/`uname -r`/build
+    CFLAGS='-g -O2' LIBS='-ljemalloc' ../configure --with-linux=/lib/modules/`uname -r`/build
     make -j 6
     sudo make install
     sudo make INSTALL_MOD_DIR=kernel/net/openvswitch modules_install

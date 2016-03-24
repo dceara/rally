@@ -118,9 +118,13 @@ class OvnSandboxFarmEngine(SandboxEngine):
 
                 cmd = "[ -x ovs-sandbox.sh ] && ./ovs-sandbox.sh --cleanup"
 
-                server.ssh.run(cmd,
+                try:
+                    server.ssh.run(cmd,
                             stdout=sys.stdout, stderr=sys.stderr,
                             raise_on_error=False)
+                except Exception as e:
+                    LOG.warn("cleanup node %s failed" % server.host)
+                    LOG.exception(e)
 
             self.deployment.delete_resource(resource.id)
 

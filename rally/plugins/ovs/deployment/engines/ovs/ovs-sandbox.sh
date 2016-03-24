@@ -397,7 +397,7 @@ function cleanup {
 
     # Ensure cleanup.
     pids=`cat "$box_name"/*.pid 2>/dev/null`
-    [ -n "$pids" ] && kill -15 $pids
+    [ -n "$pids" ] && kill -15 `echo $pids`
 
 
     if [ X"$SANDBOX_BIND_IP" != X"" ] ; then
