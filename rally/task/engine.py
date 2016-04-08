@@ -22,6 +22,7 @@ import traceback
 import jsonschema
 import six
 
+from rally.common import profile
 from rally.common.i18n import _
 from rally.common import logging
 from rally.common import objects
@@ -271,7 +272,8 @@ class TaskEngine(object):
         try:
             self._validate_config_scenarios_name(self.config)
             self._validate_config_syntax(self.config)
-            self._validate_config_semantic(self.config)
+            # TODO: l8huang
+            #self._validate_config_semantic(self.config)
         except Exception as e:
             log = [str(type(e)), str(e), json.dumps(traceback.format_exc())]
             self.task.set_failed(log=log)
@@ -284,10 +286,12 @@ class TaskEngine(object):
     def _prepare_context(self, ctx, name, credential):
         scenario_context = copy.deepcopy(
             scenario.Scenario.get(name)._meta_get("default_context"))
-        if self.existing_users and "users" not in ctx:
-            scenario_context.setdefault("existing_users", self.existing_users)
-        elif "users" not in ctx:
-            scenario_context.setdefault("users", {})
+
+        if profile.is_openstack():
+            if self.existing_users and "users" not in ctx:
+                scenario_context.setdefault("existing_users", self.existing_users)
+            elif "users" not in ctx:
+                scenario_context.setdefault("users", {})
 
         scenario_context.update(ctx)
         context_obj = {

@@ -34,6 +34,7 @@ from rally.common.i18n import _
 from rally.common import junit
 from rally.common import logging
 from rally.common import utils as rutils
+from rally.common import profile
 from rally import consts
 from rally import exceptions
 from rally import plugins
@@ -731,6 +732,7 @@ class TaskCommands(object):
                    action="store_true",
                    help="Output in JSON format.")
     @envutils.with_default_task_id
+    @profile.configure(exclude=[profile.PROFILE_OVS])
     def sla_check(self, task_id=None, tojson=False):
         """Display SLA check results table.
 

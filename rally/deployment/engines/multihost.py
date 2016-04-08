@@ -87,12 +87,13 @@ class MultihostEngine(engine.Engine):
         self.deployment.update_status(consts._DeployStatus.DEPLOY_SUBDEPLOY)
         self.controller, self.credentials = self._deploy_node(
             self.config["controller"])
-        credential = self.credentials[0]
+        credential = self.credentials["admin"] # TODO: copy one in rally ovs
         self.controller_ip = parse.urlparse(credential.auth_url).hostname
 
-        for node_config in self.config["nodes"]:
-            self._update_controller_ip(node_config)
-            self.nodes.append(self._deploy_node(node_config)[0])
+        if "nodes" in self.config:
+            for node_config in self.config["nodes"]:
+                self._update_controller_ip(node_config)
+                self.nodes.append(self._deploy_node(node_config)[0])
         return self.credentials
 
     def cleanup(self):

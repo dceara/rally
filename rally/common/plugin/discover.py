@@ -42,6 +42,7 @@ def itersubclasses(cls, seen=None):
                 yield sub
 
 
+# TODO: pass root module 'rally' by argument
 def import_modules_from_package(package):
     """Import modules from package and append into sys.modules
 

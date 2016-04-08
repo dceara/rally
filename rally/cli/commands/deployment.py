@@ -33,6 +33,7 @@ from rally.cli import envutils
 from rally.common import fileutils
 from rally.common.i18n import _
 from rally.common import utils
+from rally.common import profile
 from rally import exceptions
 from rally import plugins
 
@@ -208,6 +209,7 @@ class DeploymentCommands(object):
                    metavar="<uuid>", required=False,
                    help="UUID or name of the deployment.")
     @envutils.with_default_deployment()
+    @profile.configure(exclude=[profile.PROFILE_OVS])
     def check(self, deployment=None):
         """Check keystone authentication and list all available services.
 
