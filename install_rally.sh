@@ -426,28 +426,16 @@ __EOF__
 
     . "$DESTDIR"/bin/activate
 
-    # Recent versions of `pip` insist that setuptools>=0.8 is installed,
-    # because they try to use the "wheel" format for any kind of package.
-    # So we need to update setuptools, or `pip` will error out::
-    #
-    #     Wheel installs require setuptools >= 0.8 for dist-info support.
-    #
-    if pip wheel --help 1>/dev/null 2>/dev/null; then
-        (cd "$DESTDIR" && download_from_pypi setuptools)
-        # setup.py must be called with `python', which will be the
-        # python executable inside the virtualenv, not `$PYTHON',
-        # which is the system python.
-        if ! (cd "$DESTDIR" && tar -xzf setuptools-*.tar.gz && \
-              cd setuptools-* && python setup.py install);
-        then
-            die $EX_SOFTWARE \
-                "Failed to install the latest version of Python 'setuptools'" <<__EOF__
+    # Setuptools>=0.8 is required to support "wheel" format, otherwise
+    # pip will fail with an error. To be sure, just run upgrade to the
+    # recent version of setuptools
+    download - https://bootstrap.pypa.io/ez_setup.py | python - --insecure\
+        || die ${EX_SOFTWARE}\
+            "Failed to install the latest version of Python 'setuptools'" <<__EOF__
 
 The required Python package setuptools could not be installed.
 
 __EOF__
-        fi
-    fi
 }
 
 setup_rally_configuration () {
