@@ -103,6 +103,10 @@ class SSH(object):
         self.key_filename = key_filename
         self._client = False
 
+    def __del__(self):
+        if self._client:
+            self.close()
+
     def _get_pkey(self, key):
         if isinstance(key, six.string_types):
             key = six.moves.StringIO(key)
