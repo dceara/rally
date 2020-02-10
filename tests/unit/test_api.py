@@ -222,7 +222,7 @@ class TaskAPITestCase(test.TestCase):
 
         some_uuid = "ca441749-0eb9-4fcc-b2f6-76d314c55404"
 
-        api.Task.abort(some_uuid, soft=soft, async=False)
+        api.Task.abort(some_uuid, soft=soft, is_async=False)
 
         mock_task.get.assert_called_once_with(some_uuid)
         mock_task.get.return_value.abort.assert_called_once_with(soft=soft)
@@ -233,10 +233,10 @@ class TaskAPITestCase(test.TestCase):
     @ddt.data(True, False)
     @mock.patch("rally.api.time")
     @mock.patch("rally.api.objects.Task")
-    def test_abort_async(self, soft, mock_task, mock_time):
+    def test_abort_is_async(self, soft, mock_task, mock_time):
         some_uuid = "133695fb-400d-4988-859c-30bfaa0488ce"
 
-        api.Task.abort(some_uuid, soft=soft, async=True)
+        api.Task.abort(some_uuid, soft=soft, is_async=True)
 
         mock_task.get.assert_called_once_with(some_uuid)
         mock_task.get.return_value.abort.assert_called_once_with(soft=soft)

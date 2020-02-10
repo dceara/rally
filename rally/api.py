@@ -305,7 +305,7 @@ class Task(object):
             raise
 
     @classmethod
-    def abort(cls, task_uuid, soft=False, async=True):
+    def abort(cls, task_uuid, soft=False, is_async=True):
         """Abort running task.
 
         :param task_uuid: The UUID of the task
@@ -314,12 +314,12 @@ class Task(object):
                      current scenario, otherwise as soon as possible before
                      all the scenario iterations finish [Default: False]
         :type soft: bool
-        :param async: don't wait until task became in 'running' state
+        :param is_async: don't wait until task became in 'running' state
                       [Default: False]
-        :type async: bool
+        :type is_async: bool
         """
 
-        if not async:
+        if not is_async:
             current_status = objects.Task.get_status(task_uuid)
             if current_status in objects.Task.NOT_IMPLEMENTED_STAGES_FOR_ABORT:
                 LOG.info(_LI("Task status is '%s'. Should wait until it became"
@@ -331,7 +331,7 @@ class Task(object):
 
         objects.Task.get(task_uuid).abort(soft=soft)
 
-        if not async:
+        if not is_async:
             LOG.info(_LI("Waiting until the task stops."))
             finished_stages = [consts.TaskStatus.ABORTED,
                                consts.TaskStatus.FINISHED,

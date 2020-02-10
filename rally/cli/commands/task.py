@@ -272,7 +272,7 @@ class TaskCommands(object):
                   "starting. If you are running task with only one "
                   "scenario, soft abort will not help at all.")
 
-        api.Task.abort(task_id, soft, async=False)
+        api.Task.abort(task_id, soft, is_async=False)
 
         print("Task %s successfully stopped." % task_id)
 
